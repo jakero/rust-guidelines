@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 SRC_GUIDELINES="$PROJECT_ROOT/src/guidelines"
 SKILLS_DIR="$PROJECT_ROOT/skills/pragmatic-rust-guidelines"
 PARTS_DIR="$SKILLS_DIR/parts"
