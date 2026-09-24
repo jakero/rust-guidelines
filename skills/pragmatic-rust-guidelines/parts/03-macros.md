@@ -1,67 +1,22 @@
 # Macro Design & Safety
 
-> Pragmatic Rust Guidelines - Part 10
+> Pragmatic Rust Guidelines - Part 03
 > Source category: `macros`
 
 ## Table of Contents
 
-- **Prefer 'macros by example' over proc macros (M-EXAMPLE-OVER-PROC)**: easy macro inspection and fast compilation.
-- **Third party items come from hidden `_private` module (M-MACRO-HELPERS)**: predictable compilation.
 - **Macros are a last resort (M-MACRO-LAST-RESORT)**: minimal complexity.
-- **Macros assume main crate (M-MACRO-MAIN-CRATE)**: simple macro logic.
+- **Prefer 'macros by example' over proc macros (M-EXAMPLE-OVER-PROC)**: easy macro inspection and fast compilation.
 - **Macros don't lie about signatures (M-MACROS-DONT-LIE)**: clarity for users and LLMs.
+- **Macros assume main crate (M-MACRO-MAIN-CRATE)**: simple macro logic.
+- **Third party items come from hidden `_private` module (M-MACRO-HELPERS)**: predictable compilation.
 - **Proc macros should have separate impl crate incl. tests (M-PROC-IMPL)**: thoroughly testable proc macros.
 - **Proc macros don't produce implied or hidden items (M-PROC-IMPLIED-ITEMS)**: clear errors and correct hygiene and visibility.
 
 ---
 
 
-## Prefer 'macros by example' over proc macros (M-EXAMPLE-OVER-PROC)
-
-> **Rationale**: easy macro inspection and fast compilation.
-
-When a 'macro by example' can do the job, it should be preferred over proc macros.
-
-Proc macros are more powerful, but their expansion can't easily be inspected. Where this versatility isn't needed, a simple 'macro by example' is the better option.
-
-```rust,ignore
-// Bad, attribute macro requires proc macro machinery, can be hard to 
-// inspect in some IDEs, and isn't needed here.
-#[make_new_id]
-struct MyId;
-
-// Good, easier to write, maintain and inspect, faster compilation speed.
-make_new_id!(MyId);
-```
-
----
-
-
-## Third party items come from hidden `_private` module (M-MACRO-HELPERS)
-
-> **Rationale**: predictable compilation.
-
-When a macro expansion needs to refer to third-party items, the host crate should re-export those from a hidden module, and the macro should emit fully-qualified paths through that module rather than expecting the user's crate to depend on the third-party crate directly.
-
-For example, a crate `foo` requiring `bar` traits would do:
-
-```rust,ignore
-#[doc(hidden)]
-pub mod _private {
-    pub use ::bar::Bar;
-}
-
-pub use foo_proc::my_macro;
-```
-
-The `my_macro!` implementation would then rely on its presence in its emitted code:
-
-```rust,ignore
-impl ::foo::_private::Bar for MyType { ... }
-```
-
----
-
+<a id="M-MACRO-LAST-RESORT"></a>
 
 ## Macros are a last resort (M-MACRO-LAST-RESORT)
 
@@ -84,24 +39,30 @@ Counterintuitively, the more structurally complex the result of a macro expansio
 ---
 
 
-## Macros assume main crate (M-MACRO-MAIN-CRATE)
+<a id="M-EXAMPLE-OVER-PROC"></a>
 
-> **Rationale**: simple macro logic.
+## Prefer 'macros by example' over proc macros (M-EXAMPLE-OVER-PROC)
 
-Procedural macros can (and should) assume they are used through their main crate and emit paths for that.
+> **Rationale**: easy macro inspection and fast compilation.
 
-For crates including proc macros it is common to ship them split in 3 for technical reasons:
+When a 'macro by example' can do the job, it should be preferred over proc macros.
 
-- `foo` - the main crate that re-exports macros from `foo_proc`, along with extra traits or types,
-- `foo_proc` - facade re-exporting macros from `foo_proc_impl` with `proc-macro = true`,
-- `foo_proc_impl` - the actual macro implementation and unit tests.
+Proc macros are more powerful, but their expansion can't easily be inspected. Where this versatility isn't needed, a simple 'macro by example' is the better option.
 
-In some cases there can be additional crates involved. Authors might be tempted to make `foo`, `foo_proc`, and siblings all work, resulting in complex re-export hierarchies or the use of 3rd party helpers. In reality, the minimal UX gain is usually not worth the added complexity (or compile time overhead), given the ecosystem precedent of mostly not supporting these usage modes in the first place.
+```rust,ignore
+// Bad, attribute macro requires proc macro machinery, can be hard to 
+// inspect in some IDEs, and isn't needed here.
+#[make_new_id]
+struct MyId;
 
-This also implies you should not attempt to support use cases where your crate is imported under a different name.
+// Good, easier to write, maintain and inspect, faster compilation speed.
+make_new_id!(MyId);
+```
 
 ---
 
+
+<a id="M-MACROS-DONT-LIE"></a>
 
 ## Macros don't lie about signatures (M-MACROS-DONT-LIE)
 
@@ -129,6 +90,57 @@ foo(token).await
 
 ---
 
+
+<a id="M-MACRO-MAIN-CRATE"></a>
+
+## Macros assume main crate (M-MACRO-MAIN-CRATE)
+
+> **Rationale**: simple macro logic.
+
+Procedural macros can (and should) assume they are used through their main crate and emit paths for that.
+
+For crates including proc macros it is common to ship them split in 3 for technical reasons:
+
+- `foo` - the main crate that re-exports macros from `foo_proc`, along with extra traits or types,
+- `foo_proc` - facade re-exporting macros from `foo_proc_impl` with `proc-macro = true`,
+- `foo_proc_impl` - the actual macro implementation and unit tests.
+
+In some cases there can be additional crates involved. Authors might be tempted to make `foo`, `foo_proc`, and siblings all work, resulting in complex re-export hierarchies or the use of 3rd party helpers. In reality, the minimal UX gain is usually not worth the added complexity (or compile time overhead), given the ecosystem precedent of mostly not supporting these usage modes in the first place.
+
+This also implies you should not attempt to support use cases where your crate is imported under a different name.
+
+---
+
+
+<a id="M-MACRO-HELPERS"></a>
+
+## Third party items come from hidden `_private` module (M-MACRO-HELPERS)
+
+> **Rationale**: predictable compilation.
+
+When a macro expansion needs to refer to third-party items, the host crate should re-export those from a hidden module, and the macro should emit fully-qualified paths through that module rather than expecting the user's crate to depend on the third-party crate directly.
+
+For example, a crate `foo` requiring `bar` traits would do:
+
+```rust,ignore
+#[doc(hidden)]
+pub mod _private {
+    pub use ::bar::Bar;
+}
+
+pub use foo_proc::my_macro;
+```
+
+The `my_macro!` implementation would then rely on its presence in its emitted code:
+
+```rust,ignore
+impl ::foo::_private::Bar for MyType { ... }
+```
+
+---
+
+
+<a id="M-PROC-IMPL"></a>
 
 ## Proc macros should have separate impl crate incl. tests (M-PROC-IMPL)
 
@@ -163,6 +175,8 @@ Inside the core crate, we also recommend adding [trybuild](https://docs.rs/trybu
 
 ---
 
+
+<a id="M-PROC-IMPLIED-ITEMS"></a>
 
 ## Proc macros don't produce implied or hidden items (M-PROC-IMPLIED-ITEMS)
 

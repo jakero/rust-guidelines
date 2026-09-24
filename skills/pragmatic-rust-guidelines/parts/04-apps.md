@@ -1,16 +1,46 @@
 # Application Binary Design
 
-> Pragmatic Rust Guidelines - Part 08
+> Pragmatic Rust Guidelines - Part 04
 > Source category: `apps`
 
 ## Table of Contents
 
-- **Applications may use Anyhow or derivatives (M-APP-ERROR)**: simple application-level error handling.
 - **Use mimalloc for apps (M-MIMALLOC-APPS)**: significant performance at no cost.
+- **Applications may use Anyhow or derivatives (M-APP-ERROR)**: simple application-level error handling.
 - **Applications target highest viable target-cpu (M-TARGET-CPU)**: fleet performance.
 
 ---
 
+
+<a id="M-MIMALLOC-APPS"></a>
+
+## Use mimalloc for apps (M-MIMALLOC-APPS)
+
+> **Rationale**: significant performance at no cost.
+
+Applications should set [mimalloc](https://crates.io/crates/mimalloc) as their global allocator. This usually results in notable performance
+increases along allocating hot paths; we have seen up to 25% benchmark improvements.
+
+Changing the allocator only takes a few lines of code. Add mimalloc to your `Cargo.toml` like so:
+
+```toml
+[dependencies]
+mimalloc = { version = "0.1" } # Or later version if available
+```
+
+Then use it from your `main.rs`:
+
+```rust,ignore
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+```
+
+---
+
+
+<a id="M-APP-ERROR"></a>
 
 ## Applications may use Anyhow or derivatives (M-APP-ERROR)
 
@@ -39,36 +69,12 @@ application-level error types.
 
 Libraries (crates used by more than one crate) should always follow [M-ERRORS-CANONICAL-STRUCTS] instead.
 
-[M-ERRORS-CANONICAL-STRUCTS]: ../libs/ux/#M-ERRORS-CANONICAL-STRUCTS
+[M-ERRORS-CANONICAL-STRUCTS]: ./02.2-libs-ux.md#M-ERRORS-CANONICAL-STRUCTS
 
 ---
 
 
-## Use mimalloc for apps (M-MIMALLOC-APPS)
-
-> **Rationale**: significant performance at no cost.
-
-Applications should set [mimalloc](https://crates.io/crates/mimalloc) as their global allocator. This usually results in notable performance
-increases along allocating hot paths; we have seen up to 25% benchmark improvements.
-
-Changing the allocator only takes a few lines of code. Add mimalloc to your `Cargo.toml` like so:
-
-```toml
-[dependencies]
-mimalloc = { version = "0.1" } # Or later version if available
-```
-
-Then use it from your `main.rs`:
-
-```rust,ignore
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
-```
-
----
-
+<a id="M-TARGET-CPU"></a>
 
 ## Applications target highest viable target-cpu (M-TARGET-CPU)
 

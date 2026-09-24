@@ -41,7 +41,9 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
 ```
 
-생성 파일은 `skills/pragmatic-rust-guidelines/`에 기록됩니다. 원본 변경과 생성 결과를 함께 검토하세요.
+생성 결과는 `skills/pragmatic-rust-guidelines/`에 기록됩니다. `parts/00-overview.md`와 `parts/00-checklist.md`는 원본 개요·적용 지침과 master checklist를 보존하며, 분야별 파일은 카테고리 README의 include 순서로 생성됩니다.
+
+빌드는 include 누락·중복, 규칙 ID 불일치, 이미지 manifest 오류를 검사하고 원본 상대 링크를 생성된 파트와 앵커로 바꿉니다. 검토되지 않은 이미지 변경이나 텍스트 설명 누락이 있으면 실패합니다. 생성 결과를 원본 변경과 함께 검토하세요.
 
 이 빌드 흐름은 기존 `scripts/agents_summary.sh`와 별개입니다. 해당 스크립트는 `src/agents/all.txt`와 `src/agents/all.meta`를 생성합니다.
 

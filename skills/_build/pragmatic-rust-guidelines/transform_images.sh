@@ -20,8 +20,8 @@ check_upstream_images() {
     timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
     if [[ ! -f "$MANIFEST_FILE" ]]; then
-        echo "Warning: Manifest file $MANIFEST_FILE not found." >&2
-        return 0
+        echo "Error: Image manifest $MANIFEST_FILE not found." >&2
+        return 1
     fi
 
     # Check for modifications to existing tracked images
@@ -68,9 +68,13 @@ check_upstream_images() {
         fi
     done < <(find "$SRC_GUIDELINES" -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.svg" -o -name "*.webp" \) | sort)
 
-    if [[ $changes_detected -eq 0 ]]; then
-        echo "Image integrity check passed (all 5 upstream images match manifest)."
+    if [[ $changes_detected -ne 0 ]]; then
+        return 1
     fi
+
+    local manifest_count
+    manifest_count=$(grep -cEv '^[[:space:]]*(#|$)' "$MANIFEST_FILE")
+    echo "Image integrity check passed ($manifest_count upstream images match manifest)."
 }
 
 transform_stream() {
@@ -92,6 +96,9 @@ transform_stream() {
                 cat "$text_file"
                 continue
             fi
+
+            echo "Error: No text description found for guideline image $img_name.png." >&2
+            return 1
         fi
 
         echo "$line"

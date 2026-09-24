@@ -1,18 +1,20 @@
 # Project Structure & CI
 
-> Pragmatic Rust Guidelines - Part 11
+> Pragmatic Rust Guidelines - Part 08
 > Source category: `project`
 
 ## Table of Contents
 
 - **Common settings come from the workspace Cargo.toml (M-CARGO-WORKSPACE)**: consistent, maintainable project configuration.
-- **All crates are siblings in one folder (M-CRATES-FLAT-FOLDER)**: simple project navigation and a standard Rust layout.
 - **The workspace lists and versions all crates (M-CRATES-IN-WORKSPACE)**: simple inter-crate dependencies and debugging.
+- **All crates are siblings in one folder (M-CRATES-FLAT-FOLDER)**: simple project navigation and a standard Rust layout.
 - **New crates target latest edition (M-LATEST-EDITION)**: access to the latest Rust features.
 - **MSRV is conservatively updated (M-MSRV)**: modern features with stability for users.
 
 ---
 
+
+<a id="M-CARGO-WORKSPACE"></a>
 
 ## Common settings come from the workspace Cargo.toml (M-CARGO-WORKSPACE)
 
@@ -24,6 +26,32 @@ Where a dependency is crate-specific, it should still be defined in the workspac
 
 ---
 
+
+<a id="M-CRATES-IN-WORKSPACE"></a>
+
+## The workspace lists and versions all crates (M-CRATES-IN-WORKSPACE)
+
+> **Rationale**: simple inter-crate dependencies and debugging.
+
+Every crate produced by the project should be listed as a workspace member, and its version should be declared in `[workspace.dependencies]` so that intra-workspace dependencies resolve to a single canonical version.
+
+```toml
+# Bad, crate links its sibling directly
+[dependencies]
+sibling.path = "../sibling"
+
+# Good, going through workspace
+[dependencies]
+sibling.workspace = true
+
+[workspace.dependencies]
+sibling = { path = "crates/sibling", version = "0.5.2" }
+```
+
+---
+
+
+<a id="M-CRATES-FLAT-FOLDER"></a>
 
 ## All crates are siblings in one folder (M-CRATES-FLAT-FOLDER)
 
@@ -71,27 +99,7 @@ Rare exceptions to this rule can occur if your crate is in the business of proce
 ---
 
 
-## The workspace lists and versions all crates (M-CRATES-IN-WORKSPACE)
-
-> **Rationale**: simple inter-crate dependencies and debugging.
-
-Every crate produced by the project should be listed as a workspace member, and its version should be declared in `[workspace.dependencies]` so that intra-workspace dependencies resolve to a single canonical version.
-
-```toml
-# Bad, crate links its sibling directly
-[dependencies]
-sibling.path = "../sibling"
-
-# Good, going through workspace
-[dependencies]
-sibling.workspace = true
-
-[workspace.dependencies]
-sibling = { path = "crates/sibling", version = "0.5.2" }
-```
-
----
-
+<a id="M-LATEST-EDITION"></a>
 
 ## New crates target latest edition (M-LATEST-EDITION)
 
@@ -103,6 +111,8 @@ Using an older edition generally has no upsides for new projects, but forces you
 
 ---
 
+
+<a id="M-MSRV"></a>
 
 ## MSRV is conservatively updated (M-MSRV)
 
