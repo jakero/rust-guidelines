@@ -1,6 +1,11 @@
 # Build Pragmatic Rust Guidelines Skills
 
-이 디렉터리에는 Pragmatic Rust Guidelines를 에이전트용으로 구성한 스킬이 있습니다. AI 에이전트가 Rust 코드를 작성하거나 검토할 때 전체 가이드라인을 한꺼번에 읽는 대신, 작업에 맞는 지침을 찾아 선택적으로 참고하도록 하는 것이 목표입니다.
+이 프로젝트는 Microsoft Pragmatic Rust Guidelines를 AI 에이전트가 활용하기 쉬운 스킬로 재구성합니다. 이를 통해 에이전트는 Rust 코드를 작성하거나 검토할 때 전체 가이드라인을 한꺼번에 읽는 대신, 작업에 맞는 지침을 선택적으로 참고할 수 있습니다.
+
+## 참고 자료
+
+- Upstream 저장소: [microsoft/rust-guidelines](https://github.com/microsoft/rust-guidelines)
+- 공식 가이드라인 사이트: [Pragmatic Rust Guidelines](https://microsoft.github.io/rust-guidelines/)
 
 ## 구성
 
@@ -11,6 +16,24 @@
   - `transform_images.sh`: 원본 이미지 해시를 확인하고 생성 중 지원되는 이미지 마크업을 텍스트 설명으로 대체
   - `image_manifest.txt`: 검토된 가이드라인 이미지의 해시 목록
   - `image_texts/`: 이미지에 대응하는 텍스트 설명
+
+## 카테고리 설명
+
+`parts/`의 각 파일은 다음 범주의 가이드라인을 담습니다.
+
+- `01-universal.md`: Rust 전반의 공통 관행, 정적 검증과 lint, 공개 타입의 출력, 명명 및 로깅.
+- `02.1-libs-interop.md`: 라이브러리 API와 Rust·외부 타입 및 trait, I/O 간의 상호운용.
+- `02.2-libs-ux.md`: 사용하기 쉬운 라이브러리 API를 위한 추상화, 오류 표현, 생성 패턴 및 메서드 설계.
+- `02.3-libs-resilience.md`: 테스트 가능성, 강한 타입, 전역 상태와 로깅 등 견고한 라이브러리 구현.
+- `02.4-libs-building.md`: 라이브러리의 시작 경험, 시스템 의존 크레이트 및 Cargo 기능 설계.
+- `03-macros.md`: 매크로 사용 기준과 선언형·프로시저 매크로의 설계 및 구현.
+- `04-apps.md`: 애플리케이션 바이너리의 오류 처리, 할당자 및 대상 CPU 설정.
+- `05-ffi.md`: FFI 경계의 상태 격리, 값 변환 및 이름 지정.
+- `06-correctness.md`: `unsafe` 코드의 soundness와 정의되지 않은 동작, panic 처리.
+- `07-performance.md`: 처리량과 hot path, 메모리·할당, 간접 참조, 해싱 및 비동기 스택 최적화.
+- `08-project.md`: Cargo workspace와 크레이트 구조, Rust edition 및 MSRV 관리.
+- `09-docs.md`: 문서의 첫 문장, 모듈 문서, 정본 링크 및 인라인 문서 작성.
+- `10-ai.md`: AI 지원을 고려한 설계, 항목별 탐색, 유효한 테스트 및 Rust다운 해결 방식.
 
 ## 다른 프로젝트에서 사용
 
@@ -25,7 +48,7 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 
 ```text
 <대상 프로젝트>/
-└── <에이전트가 검색하는 스킬 디렉터리>/
+└── skills/
     └── pragmatic-rust-guidelines/
         ├── SKILL.md
         └── parts/
@@ -41,9 +64,18 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
 ```
 
-생성 결과는 `skills/pragmatic-rust-guidelines/`에 기록됩니다. `parts/00-overview.md`와 `parts/00-checklist.md`는 원본 개요·적용 지침과 master checklist를 보존하며, 분야별 파일은 카테고리 README의 include 순서로 생성됩니다.
+### 스크립트 작동 방식
 
-빌드는 include 누락·중복, 규칙 ID 불일치, 이미지 manifest 오류를 검사하고 원본 상대 링크를 생성된 파트와 앵커로 바꿉니다. 검토되지 않은 이미지 변경이나 텍스트 설명 누락이 있으면 실패합니다. 생성 결과를 원본 변경과 함께 검토하세요.
+`build_agent_skills.sh`는 mdBook의 `src/guidelines/` 원본에서 AI 에이전트용 스킬을 생성합니다.
+
+1. `transform_images.sh --check`가 이미지 manifest 누락, 이미지 변경·누락·추가를 검사합니다. 문제가 있으면 빌드를 중단합니다. 이미지 참조에 대응하는 `image_texts/NAME.md`가 없을 때도 변환이 실패합니다.
+2. 스크립트에 정의된 공개 가이드북 순서로 범주를 처리하고, 각 범주의 `README.md` include 순서를 따릅니다. 잘못된 include, 중복 include, 파일이 누락된 include, README에서 빠진 `M-*.md`는 빌드 오류입니다.
+3. `parts/00-overview.md`와 `parts/00-checklist.md`에 원본 개요·적용 지침과 master checklist를 보존하고, `parts/01-*.md`부터 분야별 규칙을 생성합니다. 저작권 주석과 `<version>` 태그를 정리하고, 제목 anchor는 HTML anchor로 보존하며 `<why>`는 근거 문장으로 바꿉니다.
+4. source-relative 규칙 링크를 생성된 `parts/` 파일과 규칙 anchor로 변환합니다. 삭제되거나 알 수 없는 `M-*` anchor는 해당 파트로 연결하고 경고합니다. `SKILL.md`는 적용 지침과 checklist 링크, 범주별 routing table을 제공합니다.
+
+`transform_images.sh --transform`은 이미지 대신 검토된 텍스트 설명을 삽입하고 단독 `<div>` 래퍼를 제거합니다. 설명은 `image_texts/`에서 관리하며 자동 생성하지 않습니다.
+
+입력 범주와 이미지 검증은 기존 생성 파일을 지우기 전에 수행합니다. 빌드가 성공하면 생성 결과가 `skills/pragmatic-rust-guidelines/`에 기록됩니다. 원본 변경과 함께 결과를 검토하세요.
 
 이 빌드 흐름은 기존 `scripts/agents_summary.sh`와 별개입니다. 해당 스크립트는 `src/agents/all.txt`와 `src/agents/all.meta`를 생성합니다.
 
