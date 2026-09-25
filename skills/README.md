@@ -11,11 +11,9 @@
 
 - `pragmatic-rust-guidelines/SKILL.md`: 스킬의 진입점과 가이드라인 탐색 안내
 - `pragmatic-rust-guidelines/parts/`: 분야별로 나눈 생성 결과
-- `_build/pragmatic-rust-guidelines/`: 스킬 생성 도구와 입력 자료
+- `_build/pragmatic-rust-guidelines/`: 스킬 생성 도구
   - `build_agent_skills.sh`: `src/guidelines/`를 바탕으로 스킬 생성
-  - `transform_images.sh`: 원본 이미지 해시를 확인하고 생성 중 지원되는 이미지 마크업을 텍스트 설명으로 대체
-  - `image_manifest.txt`: 검토된 가이드라인 이미지의 해시 목록
-  - `image_texts/`: 이미지에 대응하는 텍스트 설명
+  - `transform_images.sh`: 생성 중 마크다운 이미지 태그 및 불필요한 div 래퍼를 생략
 
 ## 카테고리 설명
 
@@ -58,7 +56,7 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 
 ## 빌드
 
-가이드라인이나 이미지 설명을 수정한 뒤 저장소 루트에서 실행합니다.
+가이드라인 원본이나 스크립트를 수정한 뒤 저장소 루트에서 실행합니다.
 
 ```bash
 bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
@@ -72,9 +70,8 @@ bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
    - 정의된 범주별 디렉터리 존재 여부와 각 범주 `README.md`의 `{{#include M-*.md}}` 구문을 검증합니다.
    - 잘못된 include, 중복 include, 누락된 가이드라인 파일, 또는 README에 포함되지 않은 `M-*.md` 파일이 있으면 즉시 빌드를 중단합니다.
    - 각 가이드라인 헤더에서 고유한 규칙 ID(`M-*`)를 추출하여 중복 여부를 검사하고, 소스 디렉터리 및 규칙 ID와 매핑될 파트 파일 정보를 메모리에 인덱싱합니다.
-2. **원본 가이드라인 이미지 무결성 검증 (`transform_images.sh --check`)**:
-   - 업스트림 원본 이미지 중 스킬에 포함하는 이미지의 해시를 `image_manifest.txt`와 대조하여 변경, 누락, 추가 여부를 확인합니다.
-   - 생성물에서 사용하는 이미지 참조에는 텍스트 설명 파일(`image_texts/NAME.md`)이 필요하며, 누락 시 변환이 실패합니다.
+2. **가이드라인 이미지 처리 검사 (`transform_images.sh --check`)**:
+   - 에이전트 스킬에서 모든 가이드라인 이미지를 제외하는 정책이 적용되어 있는지 점검합니다.
 3. **출력 대상 디렉터리 준비 및 초기화**:
    - 기존 생성 파일 삭제 전에 앞선 1~2단계 검증이 통과된 경우에만 진행합니다.
    - 출력 디렉터리(`skills/pragmatic-rust-guidelines/parts/`)를 생성하고 기존 생성된 마크다운 파일(`*.md`)을 초기화합니다.
@@ -83,7 +80,7 @@ bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
 5. **카테고리별 파트 파일(`parts/*.md`) 생성 및 가이드라인 정제**:
    - 정의된 공개 가이드북 순서 및 각 카테고리 `README.md`의 include 선언 순서대로 가이드라인을 처리합니다.
    - 각 파트별 메타데이터, 카테고리 소개글, 규칙 제목과 `<why>` 태그 기반의 근거(Rationale) 요약이 포함된 목차(Table of Contents)를 자동 구성합니다.
-   - 각 규칙 파일 본문을 정제합니다: 저작권 주석 및 `<version>` 태그 제거, mdBook 헤더 앵커를 HTML 앵커(`<a id="..."></a>`)로 변환, `<why>` 태그를 Rationale 인용구로 변환, `transform_images.sh --transform`을 통한 이미지 텍스트 대체, 마크다운 링크 재작성을 수행합니다.
+   - 각 규칙 파일 본문을 정제합니다: 저작권 주석 및 `<version>` 태그 제거, mdBook 헤더 앵커를 HTML 앵커(`<a id="..."></a>`)로 변환, `<why>` 태그를 Rationale 인용구로 변환, `transform_images.sh --transform`을 통한 이미지 태그 및 불필요한 div 래퍼 생략, 마크다운 링크 재작성을 수행합니다.
    - 동시에 `SKILL.md` 라우팅 테이블 구성을 위한 메타데이터(파트 파일명, 도메인 제목, 규칙 개수, 규칙 ID 목록)를 수집합니다.
 6. **생성된 파트 및 규칙 앵커 무결성 검증**:
    - 소스 매핑에서 인덱싱한 총 규칙 수와 실제 생성된 규칙 수가 일치하는지 확인합니다.
@@ -100,9 +97,9 @@ bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
 
 원본 `src/guidelines/checklist/README.md`는 규칙 제목과 체크박스를 나열해 사람이 전체 항목을 점검할 때 유용하지만, 규칙의 근거와 예시가 없어 에이전트의 독립적인 적용 자료로는 부족하므로 생성 스킬에 포함하지 않습니다. 에이전트는 `SKILL.md` 라우팅 테이블로 해당 분야를 찾고, 파트별 목차와 규칙 본문의 근거·예시를 읽어 작업에 필요한 규칙만 적용합니다.
 
-`transform_images.sh --transform`은 이미지 대신 검토된 텍스트 설명을 삽입하고 단독 `<div>` 래퍼를 제거합니다. 설명은 `image_texts/`에서 관리하며 자동 생성하지 않습니다.
+`transform_images.sh --transform`은 사람용 원본 문서에 포함된 시각적 UI 화면 캡처 및 그래프 이미지(`*.png`)와 단독 `<div>` 래퍼를 생성 문서에서 생략합니다.
 
-`src/guidelines/libs/interop/M-TYPES-SEND.png`의 벤치마크 그래프는 원본 문서의 `The Cost of Send` 문단이 이미 설명하는 성능상의 예외를 시각화한 자료입니다. 에이전트용 파트에서는 그래프와 대체 요약을 생략하고 본문 설명을 유지합니다. 이 이미지는 스킬 빌드의 해시 검사 및 텍스트 설명 대상에서도 제외하지만 원본 문서와 이미지는 변경하지 않습니다.
+에이전트용 스킬로 재구성하면서 원본 가이드라인의 모든 이미지(`src/guidelines/docs/`의 rustdoc 화면 캡처 4종, `src/guidelines/libs/interop/M-TYPES-SEND.png` 벤치마크 그래프)는 제외되었습니다. 이 이미지들은 사람이 문서를 시각적으로 확인할 때 필요한 참고 자료이며, 에이전트가 Rust 지침을 이해하고 코드를 작성·검토하는 데에는 이미지 참조가 불필요합니다. 관련된 핵심 지침(`#[doc(inline)]` 적용 조건, 문서 첫 문장의 15단어 요약 규칙, `Send` 구현 요건 및 벤치마크 성능 고려사항 등)은 마크다운 본문과 코드 예시만으로 충분히 전달됩니다. 이에 따라 이미지 대체 텍스트(`image_texts/`) 및 해시 매니페스트(`image_manifest.txt`)도 제거하여 빌드 파이프라인을 단순화했습니다. 원본 `src/`의 문서와 이미지 파일은 읽기 전용으로 유지됩니다.
 
 입력 범주와 이미지 검증은 기존 생성 파일을 지우기 전에 수행합니다. 빌드가 성공하면 생성 결과가 `skills/pragmatic-rust-guidelines/`에 기록됩니다. 원본 변경과 함께 결과를 검토하세요.
 

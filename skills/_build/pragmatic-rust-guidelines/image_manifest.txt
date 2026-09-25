@@ -1,6 +1,0 @@
-# Upstream Image SHA-256 Manifest
-# Format: <relative_image_path> <sha256_hash> <last_reviewed_date>
-src/guidelines/docs/M-DOC-INLINE_BAD.png e627e305453dc0307540383f3b90c941012b03235eebeaa6b008fd67334b2460 2026-09-17
-src/guidelines/docs/M-DOC-INLINE_GOOD.png 699daa9e30dfca8866a88c68e232ad46a93786abdc84c3226a5586de19fdaf9c 2026-09-17
-src/guidelines/docs/M-FIRST-DOC-SENTENCE_BAD.png 49d108cb278d96860a38514518045ff4a942e8eee7e5f848ea020c0b394233d8 2026-09-17
-src/guidelines/docs/M-FIRST-DOC-SENTENCE_GOOD.png 375d5acb42b9e9cc818aa6020bac1f8cb7c6ac6c952453895babd30d18b7cb15 2026-09-17
