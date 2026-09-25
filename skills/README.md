@@ -23,7 +23,7 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 - [`SKILL.md`](pragmatic-rust-guidelines/SKILL.md): 적용 지침과 분야별 라우팅 테이블. 에이전트가 규칙을 찾는 시작점입니다.
 - [`parts/00-1-overview.md`](pragmatic-rust-guidelines/parts/00-1-overview.md): 원본 개요와 적용 원칙.
 - `parts/`의 분야별 파일: 목차, 규칙의 근거와 본문. 아래 목록에서 직접 열어볼 수 있습니다.
-- `_build/pragmatic-rust-guidelines/`: 생성 도구. 스킬을 **사용**할 때는 복사할 필요가 없습니다.
+- `_build/`: 생성 도구(`build_agent_skills.sh`). 스킬을 **사용**할 때는 복사할 필요가 없습니다.
 
 ### 분야별 파트
 
@@ -61,7 +61,7 @@ cp -R skills/pragmatic-rust-guidelines "$TARGET_SKILLS_DIR/"
 upstream 가이드라인 변경을 `main`에 반영하고 `custom`에 적용한 뒤, 스킬에 영향을 주는 변경이 있으면 저장소 루트에서 재생성합니다. `src/`는 이 작업 브랜치에서 직접 수정하지 않습니다.
 
 ```bash
-bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
+bash skills/_build/build_agent_skills.sh
 ```
 
 빌드 스크립트는 다음 8단계를 순서대로 실행합니다.
