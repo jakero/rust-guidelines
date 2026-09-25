@@ -353,12 +353,7 @@ echo "Building Pragmatic Rust Guidelines Agent Skills..."
 echo "Target directory: $SKILLS_DIR"
 echo ""
 
-# [2단계] 원본 가이드라인 이미지 무결성 검증
-# 생성 파일 교체 전 이미지 해시 및 대체 텍스트 설명 매니페스트 일치 여부를 검사합니다.
-bash "$SCRIPT_DIR/transform_images.sh" --check
-echo ""
-
-# [3단계] 출력 대상 디렉터리 준비 및 초기화
+# [2단계] 출력 대상 디렉터리 준비 및 초기화
 # 기존 생성된 parts/*.md 파일들을 정리하고 대상 디렉터리를 초기화합니다.
 mkdir -p "$PARTS_DIR"
 rm -f "$PARTS_DIR"/*.md
@@ -367,8 +362,22 @@ rm -f "$PARTS_DIR"/*.md
 declare -a ROUTING_ENTRIES=()
 TOTAL_RULES=0
 TOTAL_PARTS=1
+# 에이전트용 출력에서 이미지 태그와 단독 div 래퍼를 생략하는 필터
+strip_agent_images() {
+    local div_regex='^>?[[:space:]]*</?[dD][iI][vV][^>]*>[[:space:]]*$'
+    local img_regex='!\[[^]]*\]\(([A-Za-z0-9_-]+)\.png\)'
+    local line
 
-# 개별 가이드라인 마크다운 정제 함수 (저작권 제거, 앵커/근거 변환, 이미지 텍스트 변환, 링크 재작성)
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ $div_regex || "$line" =~ $img_regex ]]; then
+            continue
+        fi
+        echo "$line"
+    done
+}
+
+
+# 개별 가이드라인 마크다운 정제 함수 (저작권 제거, 앵커/근거 변환, 이미지 생략, 링크 재작성)
 clean_guideline() {
     local file="$1"
     local part_name="$2"
@@ -378,7 +387,7 @@ clean_guideline() {
         | sed -E 's/^(##+ .*) \{ #([A-Za-z0-9_-]+) \}$/<a id="\2"><\/a>\n\n\1/' \
         | sed -E 's/<why>(.*)<\/why>/> **Rationale**: \1/' \
         | sed -E 's/<version>[^<]*<\/version>//g' \
-        | bash "$SCRIPT_DIR/transform_images.sh" --transform \
+        | strip_agent_images \
         | rewrite_markdown_links "$file" "$part_name" \
         | awk 'NF{print $0; b=0} !NF{if(!b){print ""; b=1}}'
 }
@@ -389,11 +398,11 @@ clean_overview() {
         | sed -E '/^<div id="build-date">.*<\/div>$/d'
 }
 
-# [4단계] 공통 안내 문서(개요) 파트 생성
+# [3단계] 공통 안내 문서(개요) 파트 생성
 # 원본 개요(00-1-overview.md)를 정제하여 보존합니다.
 clean_overview > "$PARTS_DIR/00-1-overview.md"
 
-# [5단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
+# [4단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
 # 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 수집합니다.
 for entry in "${CATEGORIES[@]}"; do
     IFS=":" read -r part_prefix cat_dir cat_title <<< "$entry"
@@ -510,7 +519,7 @@ EOF
     TOTAL_PARTS=$((TOTAL_PARTS + 1))
 done
 
-# [6단계] 생성된 파트 및 규칙 앵커 무결성 검증
+# [5단계] 생성된 파트 및 규칙 앵커 무결성 검증
 # 생성된 총 규칙 수 일치 여부와 각 파트 파일 내 규칙 HTML 앵커 존재를 검증합니다.
 if [[ "$TOTAL_RULES" -ne "${#PART_BY_RULE_ID[@]}" ]]; then
     echo "Error: Generated $TOTAL_RULES rules, but the source map contains ${#PART_BY_RULE_ID[@]}." >&2
@@ -531,7 +540,7 @@ if [[ ! -f "$PARTS_DIR/00-1-overview.md" ]]; then
     exit 1
 fi
 
-# [7단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
+# [6단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
 # 메타데이터(Frontmatter), 사용 지침, 범주별 라우팅 테이블, AI 에이전트 모범 사례를 작성합니다.
 echo "Generating $SKILL_FILE..."
 
@@ -577,12 +586,12 @@ cat >> "$SKILL_FILE" << 'EOF'
 3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
 EOF
 
-# [8단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
+# [7단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
 # 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
 validate_generated_links
 echo "Generated Markdown links and anchors validated."
 
-# [9단계] 빌드 완료 요약 정보 출력
+# [8단계] 빌드 완료 요약 정보 출력
 echo ""
 echo "=========================================="
 echo " Agent Skills Build Complete!"
