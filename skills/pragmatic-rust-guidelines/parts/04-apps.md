@@ -69,7 +69,7 @@ application-level error types.
 
 Libraries (crates used by more than one crate) should always follow [M-ERRORS-CANONICAL-STRUCTS] instead.
 
-[M-ERRORS-CANONICAL-STRUCTS]: ./02.2-libs-ux.md#M-ERRORS-CANONICAL-STRUCTS
+[M-ERRORS-CANONICAL-STRUCTS]: ./02-2-libs-ux.md#M-ERRORS-CANONICAL-STRUCTS
 
 ---
 

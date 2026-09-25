@@ -17,7 +17,7 @@ A comprehensive collection of pragmatic design guidelines helping Rust developer
 ## Applying These Guidelines
 Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
 Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
-Read the [source overview](parts/00-overview.md) for the full design principles and applicability guidance, and use the [master checklist](parts/00-checklist.md) to review coverage.
+Read the [source overview](parts/00-1-overview.md) for the full design principles and applicability guidance. For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
 
 ## Guidelines Routing Table (Parts Index)
 Choose and inspect the relevant part file based on your current task:
@@ -25,10 +25,10 @@ Choose and inspect the relevant part file based on your current task:
 | Part File | Domain | Rules | Key Guidelines (IDs) |
 | :--- | :--- | :---: | :--- |
 | [`01-universal.md`](parts/01-universal.md) | Universal Guidelines | 11 | `M-UPSTREAM-GUIDELINES`, `M-STATIC-VERIFICATION`, `M-LINT-OVERRIDE-EXPECT`, `M-PUBLIC-DEBUG`, `M-PUBLIC-DISPLAY`, `M-SMALLER-CRATES`, `M-WEASEL-WORDS`, `M-SHORT-NAMES`, `M-REGULAR-FN`, `M-DOCUMENTED-MAGIC`, `M-LOG-STRUCTURED` |
-| [`02.1-libs-interop.md`](parts/02.1-libs-interop.md) | Libraries - Interoperability | 7 | `M-TYPES-SEND`, `M-ESCAPE-HATCHES`, `M-DONT-LEAK-TYPES`, `M-FOREIGN-REEXPORTS`, `M-IMPL-ASREF`, `M-IMPL-RANGEBOUNDS`, `M-IMPL-IO` |
-| [`02.2-libs-ux.md`](parts/02.2-libs-ux.md) | Libraries - API UX | 14 | `M-SIMPLE-ABSTRACTIONS`, `M-AVOID-WRAPPERS`, `M-DI-HIERARCHY`, `M-ERRORS-CANONICAL-STRUCTS`, `M-FROM-ERROR`, `M-INIT-BUILDER`, `M-INIT-CASCADED`, `M-SERVICES-CLONE`, `M-ESSENTIAL-FN-INHERENT`, `M-BALANCED-MODULES`, `M-NO-PRELUDE`, `M-PARAMETER-CONSISTENCY`, `M-COLLECTION-TRAITS`, `M-ASYNC-FN` |
-| [`02.3-libs-resilience.md`](parts/02.3-libs-resilience.md) | Libraries - Resilience & Robustness | 9 | `M-MOCKABLE-SYSCALLS`, `M-TEST-UTIL`, `M-INTEGRATION-TESTS`, `M-STRONG-TYPES`, `M-STRONG-TYPES-GUARD`, `M-BUILD-RESULT`, `M-NO-GLOB-REEXPORTS`, `M-AVOID-STATICS`, `M-LOG-NOT-PRINT` |
-| [`02.4-libs-building.md`](parts/02.4-libs-building.md) | Libraries - Building & Cargo Features | 3 | `M-OOBE`, `M-SYS-CRATES`, `M-FEATURES-ADDITIVE` |
+| [`02-1-libs-interop.md`](parts/02-1-libs-interop.md) | Libraries - Interoperability | 7 | `M-TYPES-SEND`, `M-ESCAPE-HATCHES`, `M-DONT-LEAK-TYPES`, `M-FOREIGN-REEXPORTS`, `M-IMPL-ASREF`, `M-IMPL-RANGEBOUNDS`, `M-IMPL-IO` |
+| [`02-2-libs-ux.md`](parts/02-2-libs-ux.md) | Libraries - API UX | 14 | `M-SIMPLE-ABSTRACTIONS`, `M-AVOID-WRAPPERS`, `M-DI-HIERARCHY`, `M-ERRORS-CANONICAL-STRUCTS`, `M-FROM-ERROR`, `M-INIT-BUILDER`, `M-INIT-CASCADED`, `M-SERVICES-CLONE`, `M-ESSENTIAL-FN-INHERENT`, `M-BALANCED-MODULES`, `M-NO-PRELUDE`, `M-PARAMETER-CONSISTENCY`, `M-COLLECTION-TRAITS`, `M-ASYNC-FN` |
+| [`02-3-libs-resilience.md`](parts/02-3-libs-resilience.md) | Libraries - Resilience & Robustness | 9 | `M-MOCKABLE-SYSCALLS`, `M-TEST-UTIL`, `M-INTEGRATION-TESTS`, `M-STRONG-TYPES`, `M-STRONG-TYPES-GUARD`, `M-BUILD-RESULT`, `M-NO-GLOB-REEXPORTS`, `M-AVOID-STATICS`, `M-LOG-NOT-PRINT` |
+| [`02-4-libs-building.md`](parts/02-4-libs-building.md) | Libraries - Building & Cargo Features | 3 | `M-OOBE`, `M-SYS-CRATES`, `M-FEATURES-ADDITIVE` |
 | [`03-macros.md`](parts/03-macros.md) | Macro Design & Safety | 7 | `M-MACRO-LAST-RESORT`, `M-EXAMPLE-OVER-PROC`, `M-MACROS-DONT-LIE`, `M-MACRO-MAIN-CRATE`, `M-MACRO-HELPERS`, `M-PROC-IMPL`, `M-PROC-IMPLIED-ITEMS` |
 | [`04-apps.md`](parts/04-apps.md) | Application Binary Design | 3 | `M-MIMALLOC-APPS`, `M-APP-ERROR`, `M-TARGET-CPU` |
 | [`05-ffi.md`](parts/05-ffi.md) | FFI & Native Interoperability | 3 | `M-ISOLATE-DLL-STATE`, `M-FFI-TRANSLATES`, `M-FFI-NAMING` |

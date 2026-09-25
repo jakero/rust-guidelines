@@ -209,7 +209,7 @@ async fn read_database(x: &DataAccess) { ... }
 ```
 
 [M-AVOID-WRAPPERS]: #M-AVOID-WRAPPERS
-[M-MOCKABLE-SYSCALLS]: ./02.3-libs-resilience.md#M-MOCKABLE-SYSCALLS
+[M-MOCKABLE-SYSCALLS]: ./02-3-libs-resilience.md#M-MOCKABLE-SYSCALLS
 [M-ABSTRACTIONS-DONT-NEST]: #
 
 ---

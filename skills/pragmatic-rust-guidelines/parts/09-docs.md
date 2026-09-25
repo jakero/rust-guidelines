@@ -56,8 +56,11 @@ Otherwise, you might end up with _widows_ and a generally unpleasant reading flo
 > - `Fragment`: Contains a single layer of configuration data (from one source) which can be merged with  
 >   data from other sources to yield a merged fragment to be deserialized into a concrete  
 >   configuration type. *(<- spans 3 lines, hard to scan in summary table)*
+> - `InternalContractViolationError`: An error that signals some internal API contract or logical condition was violated.
+> - `MergedContext`
 > - `Snapshot`: A snapshot of a config value T, allowing the value to be read. This type transparently takes  
 >   care of resource management concerns required to expose the values efficiently.
+> - `View`: A view over a configuration of type T, containing data for a specific context.
 
 As a rule of thumb, the first sentence should not exceed **15 words**.
 
@@ -197,7 +200,7 @@ This does not apply to `std` or 3rd party types; these should always be re-expor
 >
 > The `#[doc(inline)]` trick above does not change [M-NO-GLOB-REEXPORTS]; you generally should not re-export items via wildcards.
 
-[M-NO-GLOB-REEXPORTS]: ./02.3-libs-resilience.md#M-NO-GLOB-REEXPORTS
+[M-NO-GLOB-REEXPORTS]: ./02-3-libs-resilience.md#M-NO-GLOB-REEXPORTS
 
 ---
 

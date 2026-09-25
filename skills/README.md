@@ -22,10 +22,10 @@
 `parts/`의 각 파일은 다음 범주의 가이드라인을 담습니다.
 
 - `01-universal.md`: Rust 전반의 공통 관행, 정적 검증과 lint, 공개 타입의 출력, 명명 및 로깅.
-- `02.1-libs-interop.md`: 라이브러리 API와 Rust·외부 타입 및 trait, I/O 간의 상호운용.
-- `02.2-libs-ux.md`: 사용하기 쉬운 라이브러리 API를 위한 추상화, 오류 표현, 생성 패턴 및 메서드 설계.
-- `02.3-libs-resilience.md`: 테스트 가능성, 강한 타입, 전역 상태와 로깅 등 견고한 라이브러리 구현.
-- `02.4-libs-building.md`: 라이브러리의 시작 경험, 시스템 의존 크레이트 및 Cargo 기능 설계.
+- `02-1-libs-interop.md`: 라이브러리 API와 Rust·외부 타입 및 trait, I/O 간의 상호운용.
+- `02-2-libs-ux.md`: 사용하기 쉬운 라이브러리 API를 위한 추상화, 오류 표현, 생성 패턴 및 메서드 설계.
+- `02-3-libs-resilience.md`: 테스트 가능성, 강한 타입, 전역 상태와 로깅 등 견고한 라이브러리 구현.
+- `02-4-libs-building.md`: 라이브러리의 시작 경험, 시스템 의존 크레이트 및 Cargo 기능 설계.
 - `03-macros.md`: 매크로 사용 기준과 선언형·프로시저 매크로의 설계 및 구현.
 - `04-apps.md`: 애플리케이션 바이너리의 오류 처리, 할당자 및 대상 CPU 설정.
 - `05-ffi.md`: FFI 경계의 상태 격리, 값 변환 및 이름 지정.
@@ -66,12 +66,39 @@ bash skills/_build/pragmatic-rust-guidelines/build_agent_skills.sh
 
 ### 스크립트 작동 방식
 
-`build_agent_skills.sh`는 mdBook의 `src/guidelines/` 원본에서 AI 에이전트용 스킬을 생성합니다.
+`build_agent_skills.sh`는 mdBook의 `src/guidelines/` 원본에서 AI 에이전트용 스킬을 생성하며, 다음 9단계 순서로 동작합니다.
 
-1. `transform_images.sh --check`가 이미지 manifest 누락, 이미지 변경·누락·추가를 검사합니다. 문제가 있으면 빌드를 중단합니다. 이미지 참조에 대응하는 `image_texts/NAME.md`가 없을 때도 변환이 실패합니다.
-2. 스크립트에 정의된 공개 가이드북 순서로 범주를 처리하고, 각 범주의 `README.md` include 순서를 따릅니다. 잘못된 include, 중복 include, 파일이 누락된 include, README에서 빠진 `M-*.md`는 빌드 오류입니다.
-3. `parts/00-overview.md`와 `parts/00-checklist.md`에 원본 개요·적용 지침과 master checklist를 보존하고, `parts/01-*.md`부터 분야별 규칙을 생성합니다. 저작권 주석과 `<version>` 태그를 정리하고, 제목 anchor는 HTML anchor로 보존하며 `<why>`는 근거 문장으로 바꿉니다.
-4. source-relative 규칙 링크를 생성된 `parts/` 파일과 규칙 anchor로 변환합니다. 삭제되거나 알 수 없는 `M-*` anchor는 해당 파트로 연결하고 경고합니다. `SKILL.md`는 적용 지침과 checklist 링크, 범주별 routing table을 제공합니다.
+1. **원본 가이드라인 소스 매핑 및 규칙 ID 인덱싱 (`load_source_map`)**:
+   - 정의된 범주별 디렉터리 존재 여부와 각 범주 `README.md`의 `{{#include M-*.md}}` 구문을 검증합니다.
+   - 잘못된 include, 중복 include, 누락된 가이드라인 파일, 또는 README에 포함되지 않은 `M-*.md` 파일이 있으면 즉시 빌드를 중단합니다.
+   - 각 가이드라인 헤더에서 고유한 규칙 ID(`M-*`)를 추출하여 중복 여부를 검사하고, 소스 디렉터리 및 규칙 ID와 매핑될 파트 파일 정보를 메모리에 인덱싱합니다.
+2. **원본 가이드라인 이미지 무결성 검증 (`transform_images.sh --check`)**:
+   - 업스트림 원본 이미지의 해시를 `image_manifest.txt`와 대조하여 이미지 변경, 누락, 추가 여부를 확인합니다.
+   - 가이드라인 본문에서 참조하는 이미지에 대응하는 텍스트 설명 파일(`image_texts/NAME.md`)이 준비되어 있는지 검증합니다. 문제 발생 시 파일 생성 단계로 넘어가지 않고 즉시 중단합니다.
+3. **출력 대상 디렉터리 준비 및 초기화**:
+   - 기존 생성 파일 삭제 전에 앞선 1~2단계 검증이 통과된 경우에만 진행합니다.
+   - 출력 디렉터리(`skills/pragmatic-rust-guidelines/parts/`)를 생성하고 기존 생성된 마크다운 파일(`*.md`)을 초기화합니다.
+4. **공통 안내 문서(개요) 파트 생성**:
+   - `src/guidelines/README.md`를 정제하여 `parts/00-1-overview.md`를 생성합니다 (빌드 일자 div 등 불필요 마크업 제거).
+5. **카테고리별 파트 파일(`parts/*.md`) 생성 및 가이드라인 정제**:
+   - 정의된 공개 가이드북 순서 및 각 카테고리 `README.md`의 include 선언 순서대로 가이드라인을 처리합니다.
+   - 각 파트별 메타데이터, 카테고리 소개글, 규칙 제목과 `<why>` 태그 기반의 근거(Rationale) 요약이 포함된 목차(Table of Contents)를 자동 구성합니다.
+   - 각 규칙 파일 본문을 정제합니다: 저작권 주석 및 `<version>` 태그 제거, mdBook 헤더 앵커를 HTML 앵커(`<a id="..."></a>`)로 변환, `<why>` 태그를 Rationale 인용구로 변환, `transform_images.sh --transform`을 통한 이미지 텍스트 대체, 마크다운 링크 재작성을 수행합니다.
+   - 동시에 `SKILL.md` 라우팅 테이블 구성을 위한 메타데이터(파트 파일명, 도메인 제목, 규칙 개수, 규칙 ID 목록)를 수집합니다.
+6. **생성된 파트 및 규칙 앵커 무결성 검증**:
+   - 소스 매핑에서 인덱싱한 총 규칙 수와 실제 생성된 규칙 수가 일치하는지 확인합니다.
+   - 모든 규칙 ID의 HTML 앵커가 해당 파트 파일에 누락 없이 존재하는지 확인하고, 개요 파트 파일 존재 여부도 점검합니다.
+7. **에이전트 스킬 진입점 인덱스 파일(`SKILL.md`) 생성**:
+   - AI 에이전트를 위한 스킬 메타데이터(Frontmatter), 스킬 활용 시점 및 적용 지침을 작성합니다.
+   - 5단계에서 수집한 메타데이터를 기반으로 분야별 파트 링크, 도메인명, 포함 규칙 수, 핵심 규칙 ID 목록이 담긴 라우팅 테이블(Routing Table)을 생성합니다.
+   - AI 에이전트의 효율적 탐색을 위한 모범 사례(Targeted Reading, Spirit Over Letter, Rust-Shaped Solutions)를 추가합니다.
+8. **생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증 (`validate_generated_links`)**:
+   - 생성된 모든 마크다운 파일 내의 상대 링크와 규칙 앵커(`M-*`)를 전수 검사하여 누락된 파일이나 깨진 앵커가 없는지 검증합니다.
+   - 알 수 없거나 삭제된 앵커 링크가 있으면 경고하고 해당 파트 파일로 정상 유도되었는지 확인합니다.
+9. **빌드 완료 요약 정보 출력**:
+   - 총 생성된 파트 수, 정제된 규칙 수, 출력 디렉터리 및 진입점 파일 경로를 콘솔에 출력합니다.
+
+원본 `src/guidelines/checklist/README.md`는 규칙 제목과 체크박스를 나열해 사람이 전체 항목을 점검할 때 유용하지만, 규칙의 근거와 예시가 없어 에이전트의 독립적인 적용 자료로는 부족하므로 생성 스킬에 포함하지 않습니다. 에이전트는 `SKILL.md` 라우팅 테이블로 해당 분야를 찾고, 파트별 목차와 규칙 본문의 근거·예시를 읽어 작업에 필요한 규칙만 적용합니다.
 
 `transform_images.sh --transform`은 이미지 대신 검토된 텍스트 설명을 삽입하고 단독 `<div>` 래퍼를 제거합니다. 설명은 `image_texts/`에서 관리하며 자동 생성하지 않습니다.
 

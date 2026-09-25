@@ -141,7 +141,7 @@ impl Library {
 }
 ```
 
-[M-RUNTIME-ABSTRACTED]: ./02.2-libs-ux.md
+[M-RUNTIME-ABSTRACTED]: ./02-2-libs-ux.md
 
 ---
 
