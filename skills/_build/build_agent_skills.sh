@@ -289,11 +289,6 @@ validate_generated_destination() {
                 echo "Error: Generated Markdown link '$destination' in $source_file has no matching rule anchor." >&2
                 return 1
             fi
-        elif [[ "$target_file" == "$PARTS_DIR/00-1-overview.md" && "$anchor" == "meta-design-principles" ]]; then
-            if ! grep -Fq "## Meta Design Principles" "$target_file"; then
-                echo "Error: Generated overview anchor '$anchor' is missing." >&2
-                return 1
-            fi
         else
             echo "Error: Generated Markdown link '$destination' in $source_file has an unsupported local anchor." >&2
             return 1
@@ -361,7 +356,7 @@ rm -f "$PARTS_DIR"/*.md
 # SKILL.md 라우팅 테이블 생성을 위한 메타데이터 수집 변수 초기화
 declare -a ROUTING_ENTRIES=()
 TOTAL_RULES=0
-TOTAL_PARTS=1
+TOTAL_PARTS=0
 # 에이전트용 출력에서 이미지 태그와 단독 div 래퍼를 생략하는 필터
 strip_agent_images() {
     local div_regex='^>?[[:space:]]*</?[dD][iI][vV][^>]*>[[:space:]]*$'
@@ -392,17 +387,7 @@ clean_guideline() {
         | awk 'NF{print $0; b=0} !NF{if(!b){print ""; b=1}}'
 }
 
-# 원본 개요 문서 정제 함수 (빌드 일자 div 태그 제거 등)
-clean_overview() {
-    clean_guideline "$SRC_GUIDELINES/README.md" "00-1-overview.md" \
-        | sed -E '/^<div id="build-date">.*<\/div>$/d'
-}
-
-# [3단계] 공통 안내 문서(개요) 파트 생성
-# 원본 개요(00-1-overview.md)를 정제하여 보존합니다.
-clean_overview > "$PARTS_DIR/00-1-overview.md"
-
-# [4단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
+# [3단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
 # 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 수집합니다.
 for entry in "${CATEGORIES[@]}"; do
     IFS=":" read -r part_prefix cat_dir cat_title <<< "$entry"
@@ -519,7 +504,7 @@ EOF
     TOTAL_PARTS=$((TOTAL_PARTS + 1))
 done
 
-# [5단계] 생성된 파트 및 규칙 앵커 무결성 검증
+# [4단계] 생성된 파트 및 규칙 앵커 무결성 검증
 # 생성된 총 규칙 수 일치 여부와 각 파트 파일 내 규칙 HTML 앵커 존재를 검증합니다.
 if [[ "$TOTAL_RULES" -ne "${#PART_BY_RULE_ID[@]}" ]]; then
     echo "Error: Generated $TOTAL_RULES rules, but the source map contains ${#PART_BY_RULE_ID[@]}." >&2
@@ -534,13 +519,7 @@ for rule_id in "${!PART_BY_RULE_ID[@]}"; do
     fi
 done
 
-# 개요 파트(00-1-overview.md) 생성 확인
-if [[ ! -f "$PARTS_DIR/00-1-overview.md" ]]; then
-    echo "Error: Generated support part is missing: 00-1-overview.md" >&2
-    exit 1
-fi
-
-# [6단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
+# [5단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
 # 메타데이터(Frontmatter), 사용 지침, 범주별 라우팅 테이블, AI 에이전트 모범 사례를 작성합니다.
 echo "Generating $SKILL_FILE..."
 
@@ -564,7 +543,7 @@ A comprehensive collection of pragmatic design guidelines helping Rust developer
 ## Applying These Guidelines
 Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
 Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
-Read the [source overview](parts/00-1-overview.md) for the full design principles and applicability guidance. For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
+For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
 
 ## Guidelines Routing Table (Parts Index)
 Choose and inspect the relevant part file based on your current task:
@@ -586,12 +565,12 @@ cat >> "$SKILL_FILE" << 'EOF'
 3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
 EOF
 
-# [7단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
+# [6단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
 # 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
 validate_generated_links
 echo "Generated Markdown links and anchors validated."
 
-# [8단계] 빌드 완료 요약 정보 출력
+# [7단계] 빌드 완료 요약 정보 출력
 echo ""
 echo "=========================================="
 echo " Agent Skills Build Complete!"

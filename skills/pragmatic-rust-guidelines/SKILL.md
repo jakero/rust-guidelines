@@ -17,7 +17,7 @@ A comprehensive collection of pragmatic design guidelines helping Rust developer
 ## Applying These Guidelines
 Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
 Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
-Read the [source overview](parts/00-1-overview.md) for the full design principles and applicability guidance. For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
+For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
 
 ## Guidelines Routing Table (Parts Index)
 Choose and inspect the relevant part file based on your current task:
