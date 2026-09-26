@@ -141,6 +141,8 @@ impl Library {
 }
 ```
 
+> **Unavailable source reference**: [M-RUNTIME-ABSTRACTED] is absent from the current source guidelines. The reference is left unlinked; do not infer its contents or substitute another rule.
+
 
 ---
 

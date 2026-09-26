@@ -38,6 +38,79 @@ CATEGORIES=(
 declare -A PART_BY_SOURCE_DIR=()
 declare -A PART_BY_RULE_ID=()
 
+# 반영된 upstream 리비전 및 커밋 날짜 전역 변수
+UPSTREAM_COMMIT_FULL=""
+UPSTREAM_COMMIT_DATE=""
+
+# upstream 리비전 식별 및 소스 디렉터리 무결성을 검증하는 함수
+verify_upstream_source_revision() {
+    local upstream_ref="refs/remotes/upstream/main"
+    if ! git -C "$PROJECT_ROOT" rev-parse --verify --quiet "$upstream_ref" >/dev/null; then
+        echo "Error: Upstream reference '$upstream_ref' is not found in the local repository." >&2
+        echo "Run 'git fetch upstream main' to update the local upstream reference before building." >&2
+        return 1
+    fi
+
+    local -a merge_bases=()
+    mapfile -t merge_bases < <(git -C "$PROJECT_ROOT" merge-base --all HEAD "$upstream_ref")
+    if [[ "${#merge_bases[@]}" -eq 0 ]]; then
+        echo "Error: No common merge-base commit found between HEAD and '$upstream_ref'." >&2
+        return 1
+    elif [[ "${#merge_bases[@]}" -gt 1 ]]; then
+        echo "Error: Multiple merge-base commits found between HEAD and '$upstream_ref': ${merge_bases[*]}" >&2
+        return 1
+    fi
+
+    local candidate_sha="${merge_bases[0]}"
+    local rel_src_dir="src/guidelines"
+
+    # 1. 후보 리비전과 HEAD의 src/guidelines 트리가 완전히 일치하는지 검증
+    local tree_diff
+    tree_diff=$(git -C "$PROJECT_ROOT" diff-tree -r --no-commit-id "$candidate_sha" HEAD -- "$rel_src_dir")
+    if [[ -n "$tree_diff" ]]; then
+        echo "Error: The source guidelines in HEAD differ from the incorporated upstream revision ($candidate_sha)." >&2
+        return 1
+    fi
+
+    # 2. 작업 트리 내 src/guidelines의 staged/unstaged 변경 여부 검증
+    # (Git LFS 파일은 로컬 바이너리 체크아웃과 git index 포인터 간 차이로 WSL/Windows 환경에서 diff가 뜰 수 있으므로 filter!=lfs 파일만 검사)
+    local modified_files=()
+    mapfile -t modified_files < <(
+        { git -C "$PROJECT_ROOT" diff --name-only -- "$rel_src_dir"; \
+          git -C "$PROJECT_ROOT" diff --cached --name-only -- "$rel_src_dir"; } | sort -u
+    )
+    local non_lfs_modifications=()
+    for mod_file in "${modified_files[@]}"; do
+        [[ -z "$mod_file" ]] && continue
+        local filter_attr
+        filter_attr=$(git -C "$PROJECT_ROOT" check-attr filter -- "$mod_file" | awk -F': ' '{print $3}')
+        if [[ "$filter_attr" != "lfs" ]]; then
+            non_lfs_modifications+=("$mod_file")
+        fi
+    done
+    if [[ "${#non_lfs_modifications[@]}" -gt 0 ]]; then
+        echo "Error: The source guidelines directory has uncommitted tracked modifications:" >&2
+        printf ' - %s\n' "${non_lfs_modifications[@]}" >&2
+        return 1
+    fi
+
+    # 3. 작업 트리 내 src/guidelines의 untracked 및 ignored 파일 존재 여부 검증
+    local extra_files
+    extra_files=$(git -C "$PROJECT_ROOT" status --porcelain --ignored -- "$rel_src_dir" | grep -E '^(\?\?|!!)' || true)
+    if [[ -n "$extra_files" ]]; then
+        echo "Error: The source guidelines directory contains untracked or ignored files:" >&2
+        echo "$extra_files" >&2
+        return 1
+    fi
+
+    UPSTREAM_COMMIT_FULL="$candidate_sha"
+    UPSTREAM_COMMIT_DATE=$(git -C "$PROJECT_ROOT" log -1 --format="%cI" "$candidate_sha")
+    if [[ -z "$UPSTREAM_COMMIT_DATE" ]]; then
+        echo "Error: Failed to extract commit date for upstream revision $candidate_sha." >&2
+        return 1
+    fi
+}
+
 # 원본 가이드라인 내 과거/변경 전 규칙 ID 별칭 매핑
 declare -A RULE_ID_ALIASES=(
     ["M-ABSTRACTIONS-DONT-NEST"]="M-SIMPLE-ABSTRACTIONS"
@@ -251,7 +324,8 @@ rewrite_markdown_links() {
             local status=0
             rewritten=$(rewrite_link_destination "$source_file" "$source_part" "$destination") || status=$?
             if [[ "$status" -eq 2 ]]; then
-                # 미해결 참조는 참조 정의 라인을 생략하여 일반 텍스트로 보존
+                # 링크 정의 대신 배포된 스킬에서도 읽을 수 있는 안내를 남깁니다.
+                printf '\n> **Unavailable source reference**: %s is absent from the current source guidelines. The reference is left unlinked; do not infer its contents or substitute another rule.\n\n' "${prefix%: *}"
                 continue
             elif [[ "$status" -ne 0 ]]; then
                 return 1
@@ -379,15 +453,20 @@ validate_generated_links() {
 # 스크립트 실행 흐름 (작동 단계별 순서)
 # ==============================================================================
 
-# [1단계] 원본 가이드라인 소스 매핑 및 규칙 ID 인덱싱
+# [1단계] upstream 소스 리비전 및 입력 무결성 검증
+# 출력 파일을 수정하기 전에 upstream 리비전 존재 및 src/guidelines 트리의 변경 여부를 확인합니다.
+verify_upstream_source_revision
+
+# [2단계] 원본 가이드라인 소스 매핑 및 규칙 ID 인덱싱
 # 각 카테고리 디렉터리와 README.md의 include 구문 유효성을 검증하고 규칙 ID 매핑을 구축합니다.
 load_source_map
+
 
 echo "Building Pragmatic Rust Guidelines Agent Skills..."
 echo "Target directory: $SKILLS_DIR"
 echo ""
 
-# [2단계] 출력 대상 디렉터리 준비 및 초기화
+# [3단계] 출력 대상 디렉터리 준비 및 초기화
 # 기존 생성된 parts/*.md 파일들을 정리하고 대상 디렉터리를 초기화합니다.
 mkdir -p "$PARTS_DIR"
 rm -f "$PARTS_DIR"/*.md
@@ -426,7 +505,7 @@ clean_guideline() {
         | awk 'NF{print $0; b=0} !NF{if(!b){print ""; b=1}}'
 }
 
-# [3단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
+# [4단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
 # 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 수집합니다.
 for entry in "${CATEGORIES[@]}"; do
     IFS=":" read -r part_prefix cat_dir cat_title <<< "$entry"
@@ -543,7 +622,7 @@ EOF
     TOTAL_PARTS=$((TOTAL_PARTS + 1))
 done
 
-# [4단계] 생성된 파트 및 규칙 앵커 무결성 검증
+# [5단계] 생성된 파트 및 규칙 앵커 무결성 검증
 # 생성된 총 규칙 수 일치 여부와 각 파트 파일 내 규칙 HTML 앵커 존재를 검증합니다.
 if [[ "$TOTAL_RULES" -ne "${#PART_BY_RULE_ID[@]}" ]]; then
     echo "Error: Generated $TOTAL_RULES rules, but the source map contains ${#PART_BY_RULE_ID[@]}." >&2
@@ -558,8 +637,8 @@ for rule_id in "${!PART_BY_RULE_ID[@]}"; do
     fi
 done
 
-# [5단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
-# _build의 템플릿(SKILL.md.template)을 읽어 라우팅 테이블 표식을 동적 데이터 행으로 치환합니다.
+# [6단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
+# _build의 템플릿(SKILL.md.template)을 읽어 라우팅 테이블 및 출처 표식을 동적 데이터로 치환합니다.
 echo "Generating $SKILL_FILE from template..."
 
 if [[ ! -f "$SKILL_TEMPLATE" ]]; then
@@ -567,10 +646,17 @@ if [[ ! -f "$SKILL_TEMPLATE" ]]; then
     exit 1
 fi
 
-marker="<!-- ROUTING_TABLE_ENTRIES -->"
-marker_count=$(grep -cFx "$marker" "$SKILL_TEMPLATE" || true)
-if [[ "$marker_count" -ne 1 ]]; then
-    echo "Error: Skill template must contain exactly one '$marker' marker (found $marker_count)." >&2
+marker_routing="<!-- ROUTING_TABLE_ENTRIES -->"
+marker_routing_count=$(grep -cFx "$marker_routing" "$SKILL_TEMPLATE" || true)
+if [[ "$marker_routing_count" -ne 1 ]]; then
+    echo "Error: Skill template must contain exactly one '$marker_routing' marker (found $marker_routing_count)." >&2
+    exit 1
+fi
+
+marker_upstream="<!-- UPSTREAM_SOURCE_REVISION -->"
+marker_upstream_count=$(grep -cFx "$marker_upstream" "$SKILL_TEMPLATE" || true)
+if [[ "$marker_upstream_count" -ne 1 ]]; then
+    echo "Error: Skill template must contain exactly one '$marker_upstream' marker (found $marker_upstream_count)." >&2
     exit 1
 fi
 
@@ -578,11 +664,15 @@ tmp_skill_file="${SKILL_FILE}.tmp"
 rm -f "$tmp_skill_file"
 
 while IFS= read -r line || [[ -n "$line" ]]; do
-    if [[ "$line" == "$marker" ]]; then
+    if [[ "$line" == "$marker_routing" ]]; then
         for entry in "${ROUTING_ENTRIES[@]}"; do
             IFS="|" read -r p_file p_title p_count p_ids <<< "$entry"
             echo "| [\`$p_file\`](parts/$p_file) | $p_title | $p_count | $p_ids |" >> "$tmp_skill_file"
         done
+    elif [[ "$line" == "$marker_upstream" ]]; then
+        echo "- Repository: https://github.com/microsoft/rust-guidelines" >> "$tmp_skill_file"
+        echo "- Incorporated revision: [\`$UPSTREAM_COMMIT_FULL\`](https://github.com/microsoft/rust-guidelines/commit/$UPSTREAM_COMMIT_FULL)" >> "$tmp_skill_file"
+        echo "- Revision committed at: $UPSTREAM_COMMIT_DATE" >> "$tmp_skill_file"
     else
         echo "$line" >> "$tmp_skill_file"
     fi
@@ -590,7 +680,7 @@ done < "$SKILL_TEMPLATE"
 
 mv "$tmp_skill_file" "$SKILL_FILE"
 
-# [6단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
+# [7단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
 # 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
 validate_generated_links
 
@@ -605,7 +695,7 @@ for r_id in "${skill_rule_ids[@]}"; do
 done
 echo "Generated Markdown links, anchors, and SKILL.md rule IDs validated."
 
-# [7단계] 빌드 완료 요약 정보 출력
+# [8단계] 빌드 완료 요약 정보 출력
 echo ""
 echo "=========================================="
 echo " Agent Skills Build Complete!"

@@ -17,6 +17,7 @@ A comprehensive collection of pragmatic design guidelines helping Rust developer
 ## Applying These Guidelines
 Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
 Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
+Before choosing rules, check the project's explicit requirements and conventions, whether the change targets a library or application and a public API, and its MSRV, runtime, and deployment targets. Apply only relevant rules; do not introduce unrelated dependency, allocator, or public API changes solely to satisfy a guideline.
 For each task, use the quick index or routing table below, then navigate directly to the target rule's anchor to review its rationale and text.
 
 ## Quick Index by Task
@@ -52,6 +53,11 @@ Choose and inspect the relevant part file based on your current task:
 | [`10-ai.md`](parts/10-ai.md) | Designing for AI Assistance | 5 | `M-DESIGN-FOR-AI`, `M-SINGLE-ITEM-PATH`, `M-NO-META-DESIGN-DOCUMENTATION`, `M-TAUTOLOGICAL-TESTS`, `M-RUST-SHAPED` |
 
 ## Best Practices for AI Agents Using This Skill
-1. **Targeted Reading via Anchors**: Do not load entire part files into context. Locate the specific rule ID in the routing tables, open the part file, and navigate directly to its anchor (e.g. `<a id="M-STRONG-TYPES"></a>`) to inspect only the relevant guideline, its rationale, and its examples.
+1. **Targeted Reading via Anchors**: Prefer reading only the relevant rules. Resolve each link relative to this skill directory. If your file-reading tool does not support fragment navigation, search the target file for the exact anchor (e.g. `<a id="M-STRONG-TYPES"></a>`), then read through the next rule anchor or end of file, including rationale, exceptions, and examples. If range reads are unavailable, reading the whole file is acceptable. Follow related rules when needed to understand applicability.
 2. **Spirit Over Letter**: The guidelines exist to safeguard safety, efficiency, and clarity. Understand the rationale behind each guideline before applying or making exceptions.
 3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
+
+## Source Revision
+- Repository: https://github.com/microsoft/rust-guidelines
+- Incorporated revision: [`46e57284865473dedbf605f6b3e50666febd8802`](https://github.com/microsoft/rust-guidelines/commit/46e57284865473dedbf605f6b3e50666febd8802)
+- Revision committed at: 2026-09-15T14:42:09+02:00
