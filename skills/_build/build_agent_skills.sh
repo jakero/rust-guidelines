@@ -13,6 +13,7 @@ SRC_GUIDELINES="$PROJECT_ROOT/src/guidelines"
 SKILLS_DIR="$PROJECT_ROOT/skills/pragmatic-rust-guidelines"
 PARTS_DIR="$SKILLS_DIR/parts"
 SKILL_FILE="$SKILLS_DIR/SKILL.md"
+SKILL_TEMPLATE="$SCRIPT_DIR/SKILL.md.template"
 
 
 # 카테고리는 공식 가이드북의 공개 순서를 따릅니다.
@@ -520,50 +521,36 @@ for rule_id in "${!PART_BY_RULE_ID[@]}"; do
 done
 
 # [5단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
-# 메타데이터(Frontmatter), 사용 지침, 범주별 라우팅 테이블, AI 에이전트 모범 사례를 작성합니다.
-echo "Generating $SKILL_FILE..."
+# _build의 템플릿(SKILL.md.template)을 읽어 라우팅 테이블 표식을 동적 데이터 행으로 치환합니다.
+echo "Generating $SKILL_FILE from template..."
 
-cat > "$SKILL_FILE" << 'EOF'
----
-name: pragmatic-rust-guidelines
-description: Pragmatic Rust design guidelines covering universal idioms, API UX, resilience, performance, correctness, macros, and FFI. Use when writing, reviewing, or refactoring Rust code to ensure safety, efficiency, and maintainability.
----
+if [[ ! -f "$SKILL_TEMPLATE" ]]; then
+    echo "Error: Skill template not found: $SKILL_TEMPLATE" >&2
+    exit 1
+fi
 
-# Pragmatic Rust Guidelines
+marker="<!-- ROUTING_TABLE_ENTRIES -->"
+marker_count=$(grep -cFx "$marker" "$SKILL_TEMPLATE" || true)
+if [[ "$marker_count" -ne 1 ]]; then
+    echo "Error: Skill template must contain exactly one '$marker' marker (found $marker_count)." >&2
+    exit 1
+fi
 
-A comprehensive collection of pragmatic design guidelines helping Rust developers and AI agents produce idiomatic, safe, and high-performance code that scales.
+tmp_skill_file="${SKILL_FILE}.tmp"
+rm -f "$tmp_skill_file"
 
-## When to Use This Skill
-- **Writing new Rust code**: Refer to naming conventions, type modeling, and ergonomic API design patterns.
-- **Code reviews & refactoring**: Check for anti-patterns, unsoundness, unhandled panics, and allocation bloat.
-- **Performance optimization**: Review hasher selection, memory pre-allocation, zero-copy practices, and cache efficiency.
-- **Safety & Error handling**: Ensure predictable error boundaries, avoid premature unwraps/panics, and properly guard unsafe blocks.
+while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$marker" ]]; then
+        for entry in "${ROUTING_ENTRIES[@]}"; do
+            IFS="|" read -r p_file p_title p_count p_ids <<< "$entry"
+            echo "| [\`$p_file\`](parts/$p_file) | $p_title | $p_count | $p_ids |" >> "$tmp_skill_file"
+        done
+    else
+        echo "$line" >> "$tmp_skill_file"
+    fi
+done < "$SKILL_TEMPLATE"
 
-
-## Applying These Guidelines
-Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
-Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
-For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
-
-## Guidelines Routing Table (Parts Index)
-Choose and inspect the relevant part file based on your current task:
-
-| Part File | Domain | Rules | Key Guidelines (IDs) |
-| :--- | :--- | :---: | :--- |
-EOF
-
-for entry in "${ROUTING_ENTRIES[@]}"; do
-    IFS="|" read -r p_file p_title p_count p_ids <<< "$entry"
-    echo "| [\`$p_file\`](parts/$p_file) | $p_title | $p_count | $p_ids |" >> "$SKILL_FILE"
-done
-
-cat >> "$SKILL_FILE" << 'EOF'
-
-## Best Practices for AI Agents Using This Skill
-1. **Targeted Reading**: Do not load the entire guideline corpus at once. Look at the routing table above, locate the specific domain file (e.g., `parts/07-performance.md`), and inspect only that file.
-2. **Spirit Over Letter**: The guidelines exist to safeguard safety, efficiency, and clarity. Understand the rationale behind each guideline before applying or making exceptions.
-3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
-EOF
+mv "$tmp_skill_file" "$SKILL_FILE"
 
 # [6단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
 # 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
