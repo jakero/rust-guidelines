@@ -555,7 +555,17 @@ mv "$tmp_skill_file" "$SKILL_FILE"
 # [6단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
 # 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
 validate_generated_links
-echo "Generated Markdown links and anchors validated."
+
+# SKILL.md 내에 언급된 모든 규칙 ID가 실제 유효한 규칙 ID인지 전수 검증합니다.
+skill_rule_ids=()
+mapfile -t skill_rule_ids < <(grep -oE '`M-[A-Z0-9-]+`' "$SKILL_FILE" | tr -d '`' | sort -u)
+for r_id in "${skill_rule_ids[@]}"; do
+    if [[ -z "${PART_BY_RULE_ID[$r_id]+x}" ]]; then
+        echo "Error: Unrecognized guideline ID '$r_id' found in $SKILL_FILE." >&2
+        exit 1
+    fi
+done
+echo "Generated Markdown links, anchors, and SKILL.md rule IDs validated."
 
 # [7단계] 빌드 완료 요약 정보 출력
 echo ""

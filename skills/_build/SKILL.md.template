@@ -17,7 +17,19 @@ A comprehensive collection of pragmatic design guidelines helping Rust developer
 ## Applying These Guidelines
 Treat `must` as expected to always hold; `should` allows flexibility. Teams may apply the guidelines as appropriate to their project.
 Understand each guideline's rationale before making exceptions; do not follow its letter when doing so would violate its purpose.
-For each task, use the routing table to select relevant parts, then read their table of contents, rationale, and guideline text before applying a rule.
+For each task, use the quick index or routing table below, then navigate directly to the target rule's anchor to review its rationale and text.
+
+## Quick Index by Task
+If your task spans multiple domains, start with these curated entrypoints instead of browsing full part files:
+
+| Task Focus | Primary Part Files | Key Guidelines to Check |
+| :--- | :--- | :--- |
+| **Error Handling & Panics** | [`02-2-libs-ux.md`](parts/02-2-libs-ux.md)<br>[`04-apps.md`](parts/04-apps.md)<br>[`06-correctness.md`](parts/06-correctness.md)<br>[`02-3-libs-resilience.md`](parts/02-3-libs-resilience.md) | `M-ERRORS-CANONICAL-STRUCTS`, `M-FROM-ERROR`, `M-APP-ERROR`, `M-PANIC-IS-STOP`, `M-PANIC-ON-BUG`, `M-PANIC-CONTINUATION`, `M-PANIC-MESSAGE`, `M-BUILD-RESULT` |
+| **Type Modeling & Public API** | [`01-universal.md`](parts/01-universal.md)<br>[`02-1-libs-interop.md`](parts/02-1-libs-interop.md)<br>[`02-2-libs-ux.md`](parts/02-2-libs-ux.md)<br>[`02-3-libs-resilience.md`](parts/02-3-libs-resilience.md)<br>[`10-ai.md`](parts/10-ai.md) | `M-PUBLIC-DEBUG`, `M-PUBLIC-DISPLAY`, `M-SHORT-NAMES`, `M-REGULAR-FN`, `M-DONT-LEAK-TYPES`, `M-FOREIGN-REEXPORTS`, `M-IMPL-ASREF`, `M-SIMPLE-ABSTRACTIONS`, `M-AVOID-WRAPPERS`, `M-DI-HIERARCHY`, `M-INIT-BUILDER`, `M-SERVICES-CLONE`, `M-STRONG-TYPES`, `M-STRONG-TYPES-GUARD`, `M-SINGLE-ITEM-PATH`, `M-RUST-SHAPED` |
+| **Async & Concurrency** | [`02-1-libs-interop.md`](parts/02-1-libs-interop.md)<br>[`02-2-libs-ux.md`](parts/02-2-libs-ux.md)<br>[`07-performance.md`](parts/07-performance.md) | `M-TYPES-SEND`, `M-IMPL-IO`, `M-ASYNC-FN`, `M-YIELD-POINTS`, `M-ASYNC-STACK-SIZE` |
+| **Testing & Verification** | [`01-universal.md`](parts/01-universal.md)<br>[`02-3-libs-resilience.md`](parts/02-3-libs-resilience.md)<br>[`10-ai.md`](parts/10-ai.md)<br>[`03-macros.md`](parts/03-macros.md) | `M-STATIC-VERIFICATION`, `M-LINT-OVERRIDE-EXPECT`, `M-MOCKABLE-SYSCALLS`, `M-TEST-UTIL`, `M-INTEGRATION-TESTS`, `M-TAUTOLOGICAL-TESTS`, `M-PROC-IMPL` |
+| **Logging & Diagnostics** | [`01-universal.md`](parts/01-universal.md)<br>[`02-3-libs-resilience.md`](parts/02-3-libs-resilience.md)<br>[`07-performance.md`](parts/07-performance.md) | `M-LOG-STRUCTURED`, `M-LOG-NOT-PRINT`, `M-LOG-OVERHEAD` |
+| **Performance & Memory** | [`04-apps.md`](parts/04-apps.md)<br>[`07-performance.md`](parts/07-performance.md) | `M-MIMALLOC-APPS`, `M-TARGET-CPU`, `M-HOTPATH`, `M-MEM-REUSE`, `M-AVOID-INDIRECTION`, `M-BOX-DST`, `M-SHRINK-TO-FIT`, `M-FAST-HASHER`, `M-INITIAL-CAPACITY` |
 
 ## Guidelines Routing Table (Parts Index)
 Choose and inspect the relevant part file based on your current task:
@@ -27,6 +39,6 @@ Choose and inspect the relevant part file based on your current task:
 <!-- ROUTING_TABLE_ENTRIES -->
 
 ## Best Practices for AI Agents Using This Skill
-1. **Targeted Reading**: Do not load the entire guideline corpus at once. Look at the routing table above, locate the specific domain file (e.g., `parts/07-performance.md`), and inspect only that file.
+1. **Targeted Reading via Anchors**: Do not load entire part files into context. Locate the specific rule ID in the routing tables, open the part file, and navigate directly to its anchor (e.g. `<a id="M-STRONG-TYPES"></a>`) to inspect only the relevant guideline, its rationale, and its examples.
 2. **Spirit Over Letter**: The guidelines exist to safeguard safety, efficiency, and clarity. Understand the rationale behind each guideline before applying or making exceptions.
 3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
