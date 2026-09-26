@@ -3,6 +3,8 @@ name: pragmatic-rust-guidelines
 description: Pragmatic Rust design guidelines covering universal idioms, API UX, resilience, performance, correctness, macros, and FFI. Use when writing, reviewing, or refactoring Rust code to ensure safety, efficiency, and maintainability.
 ---
 
+<!-- Copyright (c) Microsoft Corporation. Licensed under the MIT license. -->
+
 # Pragmatic Rust Guidelines
 
 A comprehensive collection of pragmatic design guidelines helping Rust developers and AI agents produce idiomatic, safe, and high-performance code that scales.
@@ -53,7 +55,7 @@ Choose and inspect the relevant part file based on your current task:
 | [`10-ai.md`](parts/10-ai.md) | Designing for AI Assistance | 5 | `M-DESIGN-FOR-AI`, `M-SINGLE-ITEM-PATH`, `M-NO-META-DESIGN-DOCUMENTATION`, `M-TAUTOLOGICAL-TESTS`, `M-RUST-SHAPED` |
 
 ## Best Practices for AI Agents Using This Skill
-1. **Targeted Reading via Anchors**: Prefer reading only the relevant rules. Resolve each link relative to this skill directory. If your file-reading tool does not support fragment navigation, search the target file for the exact anchor (e.g. `<a id="M-STRONG-TYPES"></a>`), then read through the next rule anchor or end of file, including rationale, exceptions, and examples. If range reads are unavailable, reading the whole file is acceptable. Follow related rules when needed to understand applicability.
+1. **Targeted Reading via Anchors**: Prefer reading only the relevant rules. Resolve relative links against the directory of the document containing the link. If your file-reading tool does not support fragment navigation, search the target file for the exact anchor (e.g. `<a id="M-STRONG-TYPES"></a>`), then read through the next rule anchor or end of file, including rationale, exceptions, and examples. If range reads are unavailable, reading the whole file is acceptable. Follow related rules when needed to understand applicability.
 2. **Spirit Over Letter**: The guidelines exist to safeguard safety, efficiency, and clarity. Understand the rationale behind each guideline before applying or making exceptions.
 3. **Rust-Shaped Solutions**: Do not directly transliterate C++/Java/C# OOP patterns into Rust. Follow Rust idioms (ownership, traits, exhaustive matching, explicit errors).
 
@@ -61,3 +63,4 @@ Choose and inspect the relevant part file based on your current task:
 - Repository: https://github.com/microsoft/rust-guidelines
 - Incorporated revision: [`46e57284865473dedbf605f6b3e50666febd8802`](https://github.com/microsoft/rust-guidelines/commit/46e57284865473dedbf605f6b3e50666febd8802)
 - Revision committed at: 2026-09-15T14:42:09+02:00
+- License: MIT License (see [`LICENSE.md`](LICENSE.md) for full copyright and permission notice)

@@ -290,28 +290,32 @@ rewrite_link_destination() {
     fi
     printf '%s%s' "$rewritten" "$trailing"
 }
-
 # 마크다운 본문의 코드 블록(fence)을 보존하면서 참조 링크 및 인라인 링크를 재작성하는 함수
 rewrite_markdown_links() {
     local source_file="$1"
     local source_part="$2"
     local line
-    local in_fence=0
-    local fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
+    local in_fence_char=""
+    local in_fence_len=0
+    local open_fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
     local reference_pattern='^([[:space:]]*\[[^]]+\]:[[:space:]]+)(<[^>]+>|[^[:space:]]+)(.*)$'
     local inline_pattern='(.*)(\]\()([^)]*)(\).*)'
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ $fence_pattern ]]; then
-            if [[ "$in_fence" -eq 0 ]]; then
-                in_fence=1
-            else
-                in_fence=0
+        if [[ -n "$in_fence_char" ]]; then
+            local close_fence_pattern='^[[:space:]]*([>][[:space:]]*)*('"$in_fence_char"'{'"$in_fence_len"',})[[:space:]]*$'
+            if [[ "$line" =~ $close_fence_pattern ]]; then
+                in_fence_char=""
+                in_fence_len=0
             fi
             printf '%s\n' "$line"
             continue
         fi
-        if [[ "$in_fence" -eq 1 ]]; then
+
+        if [[ "$line" =~ $open_fence_pattern ]]; then
+            local fence_str="${BASH_REMATCH[2]}"
+            in_fence_char="${fence_str:0:1}"
+            in_fence_len="${#fence_str}"
             printf '%s\n' "$line"
             continue
         fi
@@ -359,6 +363,7 @@ rewrite_markdown_links() {
     done
 }
 
+
 # 생성된 마크다운 링크의 대상 파일 및 규칙 앵커 유효성을 검증하는 함수
 validate_generated_destination() {
     local source_file="$1"
@@ -396,8 +401,9 @@ validate_generated_destination() {
 
     if [[ -n "$anchor" ]]; then
         if [[ "$anchor" == M-* ]]; then
-            if [[ -z "${PART_BY_RULE_ID[$anchor]+x}" ]] \
-                || [[ "$target_file" != "$PARTS_DIR/${PART_BY_RULE_ID[$anchor]}" ]] \
+            local expected_part="${PART_BY_RULE_ID[$anchor]}"
+            if [[ -z "$expected_part" ]] \
+                || [[ "$(basename "$target_file")" != "$expected_part" ]] \
                 || ! grep -Fq "<a id=\"$anchor\"></a>" "$target_file"; then
                 echo "Error: Generated Markdown link '$destination' in $source_file has no matching rule anchor." >&2
                 return 1
@@ -411,24 +417,32 @@ validate_generated_destination() {
 
 # 생성된 모든 마크다운 파일 내 링크를 전수 검사하는 함수
 validate_generated_links() {
+    local search_dir="${1:-$SKILLS_DIR}"
     local file
     local line
-    local in_fence=0
-    local fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
+    local in_fence_char=""
+    local in_fence_len=0
+    local open_fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
     local reference_pattern='^([[:space:]]*\[[^]]+\]:[[:space:]]+)(<[^>]+>|[^[:space:]]+)(.*)$'
     local inline_pattern='(.*)(\]\()([^)]*)(\).*)'
 
     while IFS= read -r file; do
+        in_fence_char=""
+        in_fence_len=0
         while IFS= read -r line || [[ -n "$line" ]]; do
-            if [[ "$line" =~ $fence_pattern ]]; then
-                if [[ "$in_fence" -eq 0 ]]; then
-                    in_fence=1
-                else
-                    in_fence=0
+            if [[ -n "$in_fence_char" ]]; then
+                local close_fence_pattern='^[[:space:]]*([>][[:space:]]*)*('"$in_fence_char"'{'"$in_fence_len"',})[[:space:]]*$'
+                if [[ "$line" =~ $close_fence_pattern ]]; then
+                    in_fence_char=""
+                    in_fence_len=0
                 fi
                 continue
             fi
-            if [[ "$in_fence" -eq 1 ]]; then
+
+            if [[ "$line" =~ $open_fence_pattern ]]; then
+                local fence_str="${BASH_REMATCH[2]}"
+                in_fence_char="${fence_str:0:1}"
+                in_fence_len="${#fence_str}"
                 continue
             fi
 
@@ -445,14 +459,13 @@ validate_generated_links() {
                 remaining="$prefix"
             done
         done < "$file"
-        in_fence=0
-    done < <(find "$SKILLS_DIR" -type f -name "*.md" | sort)
+    done < <(find "$search_dir" -type f -name "*.md" | sort)
 }
+
 
 # ==============================================================================
 # 스크립트 실행 흐름 (작동 단계별 순서)
 # ==============================================================================
-
 # [1단계] upstream 소스 리비전 및 입력 무결성 검증
 # 출력 파일을 수정하기 전에 upstream 리비전 존재 및 src/guidelines 트리의 변경 여부를 확인합니다.
 verify_upstream_source_revision
@@ -461,51 +474,144 @@ verify_upstream_source_revision
 # 각 카테고리 디렉터리와 README.md의 include 구문 유효성을 검증하고 규칙 ID 매핑을 구축합니다.
 load_source_map
 
+# [3단계] 템플릿 조기 검증 (출력 수정 전 수행)
+# SKILL.md.template의 존재 및 CRLF를 감안한 필수 치환 표식 포함 여부를 미리 확인합니다.
+if [[ ! -f "$SKILL_TEMPLATE" ]]; then
+    echo "Error: Skill template not found: $SKILL_TEMPLATE" >&2
+    exit 1
+fi
+
+marker_routing="<!-- ROUTING_TABLE_ENTRIES -->"
+marker_upstream="<!-- UPSTREAM_SOURCE_REVISION -->"
+
+marker_routing_count=$(tr -d '\r' < "$SKILL_TEMPLATE" | grep -cFx "$marker_routing" || true)
+if [[ "$marker_routing_count" -ne 1 ]]; then
+    echo "Error: Skill template must contain exactly one '$marker_routing' marker (found $marker_routing_count)." >&2
+    exit 1
+fi
+
+marker_upstream_count=$(tr -d '\r' < "$SKILL_TEMPLATE" | grep -cFx "$marker_upstream" || true)
+if [[ "$marker_upstream_count" -ne 1 ]]; then
+    echo "Error: Skill template must contain exactly one '$marker_upstream' marker (found $marker_upstream_count)." >&2
+    exit 1
+fi
 
 echo "Building Pragmatic Rust Guidelines Agent Skills..."
 echo "Target directory: $SKILLS_DIR"
 echo ""
 
-# [3단계] 출력 대상 디렉터리 준비 및 초기화
-# 기존 생성된 parts/*.md 파일들을 정리하고 대상 디렉터리를 초기화합니다.
-mkdir -p "$PARTS_DIR"
-rm -f "$PARTS_DIR"/*.md
+# [4단계] 임시 스테이징 디렉터리 준비 (트랜잭션 빌드 보장)
+# 기존 스킬 파일을 즉시 삭제하지 않고, 임시 작업 공간에 먼저 완전하게 생성한 뒤 원자적으로 교체합니다.
+STAGE_DIR=$(mktemp -d "${PROJECT_ROOT}/skills/.build_stage.XXXXXX")
+BACKUP_CONTAINER=""
+BACKUP_PREVIOUS=""
+PUBLICATION_COMMITTED=0
+cleanup() {
+    local exit_code=$?
+    local signal="${1:-}"
+    trap - EXIT INT TERM
+
+    # 실제 백업된 이전 배포본($BACKUP_PREVIOUS)이 존재하는 경우에만 복원 수행
+    if [[ "$PUBLICATION_COMMITTED" -eq 0 && -n "$BACKUP_PREVIOUS" && -d "$BACKUP_PREVIOUS" ]]; then
+        echo "Build failed during publication! Restoring previous distribution from backup..." >&2
+        rm -rf "$SKILLS_DIR"
+        mv "$BACKUP_PREVIOUS" "$SKILLS_DIR"
+        echo "Previous distribution restored." >&2
+    fi
+    if [[ -n "$BACKUP_CONTAINER" && -d "$BACKUP_CONTAINER" ]]; then
+        rm -rf "$BACKUP_CONTAINER"
+    fi
+    if [[ -n "$STAGE_DIR" && -d "$STAGE_DIR" ]]; then
+        rm -rf "$STAGE_DIR"
+    fi
+
+    if [[ -n "$signal" ]]; then
+        kill -"$signal" $$
+    else
+        exit "$exit_code"
+    fi
+}
+trap 'cleanup' EXIT
+trap 'cleanup INT' INT
+trap 'cleanup TERM' TERM
+
+STAGE_PARTS_DIR="$STAGE_DIR/parts"
+STAGE_SKILL_FILE="$STAGE_DIR/SKILL.md"
+mkdir -p "$STAGE_PARTS_DIR"
+
+# 라이선스 파일 보존 (루트 LICENSE.md가 존재하면 스테이징 디렉터리에 복사)
+if [[ -f "$PROJECT_ROOT/LICENSE.md" ]]; then
+    cp "$PROJECT_ROOT/LICENSE.md" "$STAGE_DIR/LICENSE.md"
+elif [[ -f "$SKILLS_DIR/LICENSE.md" ]]; then
+    cp "$SKILLS_DIR/LICENSE.md" "$STAGE_DIR/LICENSE.md"
+fi
 
 # SKILL.md 라우팅 테이블 생성을 위한 메타데이터 수집 변수 초기화
 declare -a ROUTING_ENTRIES=()
 TOTAL_RULES=0
 TOTAL_PARTS=0
-# 에이전트용 출력에서 이미지 태그와 단독 div 래퍼를 생략하는 필터
+# 에이전트용 출력에서 이미지 태그와 단독 div 래퍼를 생략하는 필터 (코드 블록 내부 보존)
 strip_agent_images() {
-    local div_regex='^>?[[:space:]]*</?[dD][iI][vV][^>]*>[[:space:]]*$'
-    local img_regex='!\[[^]]*\]\(([A-Za-z0-9_-]+)\.png\)'
+    local div_regex='^[[:space:]]*([>][[:space:]]*)*</?[dD][iI][vV][^>]*>[[:space:]]*$'
+    local full_img_regex='^[[:space:]]*([>][[:space:]]*)*!\[[^]]*\]\(([A-Za-z0-9_-]+)\.png\)[[:space:]]*$'
+    local open_fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
+    local in_fence_char=""
+    local in_fence_len=0
     local line
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ $div_regex || "$line" =~ $img_regex ]]; then
+        if [[ -n "$in_fence_char" ]]; then
+            local close_fence_pattern='^[[:space:]]*([>][[:space:]]*)*('"$in_fence_char"'{'"$in_fence_len"',})[[:space:]]*$'
+            if [[ "$line" =~ $close_fence_pattern ]]; then
+                in_fence_char=""
+                in_fence_len=0
+            fi
+            printf '%s\n' "$line"
             continue
         fi
-        echo "$line"
+
+        if [[ "$line" =~ $open_fence_pattern ]]; then
+            local fence_str="${BASH_REMATCH[2]}"
+            in_fence_char="${fence_str:0:1}"
+            in_fence_len="${#fence_str}"
+            printf '%s\n' "$line"
+            continue
+        fi
+
+        # 단독 이미지 줄 및 단독 div 래퍼 줄은 완전히 생략
+        if [[ "$line" =~ $div_regex || "$line" =~ $full_img_regex ]]; then
+            continue
+        fi
+
+        # 인라인으로 삽입된 이미지 태그가 있는 경우 주변 설명 문장은 남기고 이미지 마크다운만 제거
+        local stripped
+        stripped=$(printf '%s\n' "$line" | sed -E 's/!\[[^]]*\]\([A-Za-z0-9_-]+\.png\)//g')
+        printf '%s\n' "$stripped"
     done
 }
 
 # 에이전트용 출력에서 코드 블록(fence) 외부의 <tip></tip>, <alert></alert> 마커를 일반 텍스트 라벨로 변환하는 필터
 transform_advisory_markers() {
-    local fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
-    local in_fence=0
+    local open_fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
+    local in_fence_char=""
+    local in_fence_len=0
     local line
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ $fence_pattern ]]; then
-            if [[ "$in_fence" -eq 0 ]]; then
-                in_fence=1
-            else
-                in_fence=0
+        if [[ -n "$in_fence_char" ]]; then
+            local close_fence_pattern='^[[:space:]]*([>][[:space:]]*)*('"$in_fence_char"'{'"$in_fence_len"',})[[:space:]]*$'
+            if [[ "$line" =~ $close_fence_pattern ]]; then
+                in_fence_char=""
+                in_fence_len=0
             fi
             printf '%s\n' "$line"
             continue
         fi
-        if [[ "$in_fence" -eq 1 ]]; then
+
+        if [[ "$line" =~ $open_fence_pattern ]]; then
+            local fence_str="${BASH_REMATCH[2]}"
+            in_fence_char="${fence_str:0:1}"
+            in_fence_len="${#fence_str}"
             printf '%s\n' "$line"
             continue
         fi
@@ -534,12 +640,12 @@ clean_guideline() {
         | rewrite_markdown_links "$file" "$part_name" \
         | awk 'NF{print $0; b=0} !NF{if(!b){print ""; b=1}}'
 }
-# [4단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
-# 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 수집합니다.
+# [5단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
+# 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 스테이징 디렉터리에 수집합니다.
 for entry in "${CATEGORIES[@]}"; do
     IFS=":" read -r part_prefix cat_dir cat_title <<< "$entry"
     full_cat_dir="$SRC_GUIDELINES/$cat_dir"
-    part_file="$PARTS_DIR/${part_prefix}.md"
+    part_file="$STAGE_PARTS_DIR/${part_prefix}.md"
 
     if [[ ! -d "$full_cat_dir" ]]; then
         echo "Warning: Directory $full_cat_dir not found, skipping."
@@ -651,80 +757,91 @@ EOF
     TOTAL_PARTS=$((TOTAL_PARTS + 1))
 done
 
-# [5단계] 생성된 파트 및 규칙 앵커 무결성 검증
-# 생성된 총 규칙 수 일치 여부와 각 파트 파일 내 규칙 HTML 앵커 존재를 검증합니다.
+# [6단계] 생성된 파트 및 규칙 앵커 무결성 검증
+# 생성된 총 규칙 수 일치 여부와 각 파트 파일 내 규칙 HTML 앵커 존재를 스테이징 공간에서 검증합니다.
 if [[ "$TOTAL_RULES" -ne "${#PART_BY_RULE_ID[@]}" ]]; then
     echo "Error: Generated $TOTAL_RULES rules, but the source map contains ${#PART_BY_RULE_ID[@]}." >&2
     exit 1
 fi
 
 for rule_id in "${!PART_BY_RULE_ID[@]}"; do
-    generated_part="$PARTS_DIR/${PART_BY_RULE_ID[$rule_id]}"
+    generated_part="$STAGE_PARTS_DIR/${PART_BY_RULE_ID[$rule_id]}"
     if [[ ! -f "$generated_part" ]] || ! grep -Fq "<a id=\"$rule_id\"></a>" "$generated_part"; then
         echo "Error: Generated part is missing the anchor for $rule_id: $generated_part" >&2
         exit 1
     fi
 done
 
-# [6단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
+# [7단계] 에이전트 스킬 진입점 인덱스 파일(SKILL.md) 생성
 # _build의 템플릿(SKILL.md.template)을 읽어 라우팅 테이블 및 출처 표식을 동적 데이터로 치환합니다.
 echo "Generating $SKILL_FILE from template..."
-
-if [[ ! -f "$SKILL_TEMPLATE" ]]; then
-    echo "Error: Skill template not found: $SKILL_TEMPLATE" >&2
-    exit 1
-fi
-
-marker_routing="<!-- ROUTING_TABLE_ENTRIES -->"
-marker_routing_count=$(grep -cFx "$marker_routing" "$SKILL_TEMPLATE" || true)
-if [[ "$marker_routing_count" -ne 1 ]]; then
-    echo "Error: Skill template must contain exactly one '$marker_routing' marker (found $marker_routing_count)." >&2
-    exit 1
-fi
-
-marker_upstream="<!-- UPSTREAM_SOURCE_REVISION -->"
-marker_upstream_count=$(grep -cFx "$marker_upstream" "$SKILL_TEMPLATE" || true)
-if [[ "$marker_upstream_count" -ne 1 ]]; then
-    echo "Error: Skill template must contain exactly one '$marker_upstream' marker (found $marker_upstream_count)." >&2
-    exit 1
-fi
-
-tmp_skill_file="${SKILL_FILE}.tmp"
-rm -f "$tmp_skill_file"
 
 while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$line" == "$marker_routing" ]]; then
         for entry in "${ROUTING_ENTRIES[@]}"; do
             IFS="|" read -r p_file p_title p_count p_ids <<< "$entry"
-            echo "| [\`$p_file\`](parts/$p_file) | $p_title | $p_count | $p_ids |" >> "$tmp_skill_file"
+            echo "| [\`$p_file\`](parts/$p_file) | $p_title | $p_count | $p_ids |" >> "$STAGE_SKILL_FILE"
         done
     elif [[ "$line" == "$marker_upstream" ]]; then
-        echo "- Repository: https://github.com/microsoft/rust-guidelines" >> "$tmp_skill_file"
-        echo "- Incorporated revision: [\`$UPSTREAM_COMMIT_FULL\`](https://github.com/microsoft/rust-guidelines/commit/$UPSTREAM_COMMIT_FULL)" >> "$tmp_skill_file"
-        echo "- Revision committed at: $UPSTREAM_COMMIT_DATE" >> "$tmp_skill_file"
+        echo "- Repository: https://github.com/microsoft/rust-guidelines" >> "$STAGE_SKILL_FILE"
+        echo "- Incorporated revision: [\`$UPSTREAM_COMMIT_FULL\`](https://github.com/microsoft/rust-guidelines/commit/$UPSTREAM_COMMIT_FULL)" >> "$STAGE_SKILL_FILE"
+        echo "- Revision committed at: $UPSTREAM_COMMIT_DATE" >> "$STAGE_SKILL_FILE"
     else
-        echo "$line" >> "$tmp_skill_file"
+        echo "$line" >> "$STAGE_SKILL_FILE"
     fi
-done < "$SKILL_TEMPLATE"
+done < <(tr -d '\r' < "$SKILL_TEMPLATE")
 
-mv "$tmp_skill_file" "$SKILL_FILE"
-
-# [7단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증
-# 모든 생성 파일의 상대 링크와 규칙 앵커 대상이 실제로 존재하는지 전수 검사합니다.
-validate_generated_links
+# [8단계] 생성된 마크다운 문서 간의 링크 및 앵커 최종 유효성 검증 (스테이징 공간 전수 검사)
+validate_generated_links "$STAGE_DIR"
 
 # SKILL.md 내에 언급된 모든 규칙 ID가 실제 유효한 규칙 ID인지 전수 검증합니다.
 skill_rule_ids=()
-mapfile -t skill_rule_ids < <(grep -oE '`M-[A-Z0-9-]+`' "$SKILL_FILE" | tr -d '`' | sort -u)
+mapfile -t skill_rule_ids < <(grep -oE '`M-[A-Z0-9-]+`' "$STAGE_SKILL_FILE" | tr -d '`' | sort -u)
 for r_id in "${skill_rule_ids[@]}"; do
     if [[ -z "${PART_BY_RULE_ID[$r_id]+x}" ]]; then
-        echo "Error: Unrecognized guideline ID '$r_id' found in $SKILL_FILE." >&2
+        echo "Error: Unrecognized guideline ID '$r_id' found in $STAGE_SKILL_FILE." >&2
         exit 1
     fi
 done
 echo "Generated Markdown links, anchors, and SKILL.md rule IDs validated."
+# [9단계] 검증 완료된 스테이징 산출물을 백업/복원 트랜잭션을 통해 최종 대상 위치로 반영
+# 1) 기존 배포 디렉터리가 존재하는 경우 임시 컨테이너 내부의 'previous' 하위 경로로 안전하게 이동
+# 2) 스테이징 디렉터리를 최종 배포 디렉터리로 승격
+# 3) 승격 성공 시 백업 컨테이너 정리, 실패 시 trap cleanup을 통해 'previous' 존재 시에만 100% 복원
+if [[ -d "$SKILLS_DIR" ]]; then
+    BACKUP_CONTAINER=$(mktemp -d "${PROJECT_ROOT}/skills/.build_backup.XXXXXX")
+    BACKUP_PREVIOUS="$BACKUP_CONTAINER/previous"
 
-# [8단계] 빌드 완료 요약 정보 출력
+    # 테스트용: 백업 rename 직전(컨테이너만 생성된 시점) 실패/인터럽트 주입 지점
+    if [[ "${TEST_INJECT_PRE_BACKUP_FAILURE:-0}" -eq 1 ]]; then
+        echo "Error: Injected simulated failure before backup rename!" >&2
+        exit 1
+    elif [[ "${TEST_INJECT_PRE_BACKUP_SIGNAL:-}" == "INT" ]]; then
+        echo "Sending SIGINT before backup rename..." >&2
+        kill -INT $$
+    elif [[ "${TEST_INJECT_PRE_BACKUP_SIGNAL:-}" == "TERM" ]]; then
+        echo "Sending SIGTERM before backup rename..." >&2
+        kill -TERM $$
+    fi
+
+    mv "$SKILLS_DIR" "$BACKUP_PREVIOUS"
+fi
+
+# 테스트용: 백업 rename 직후(승격 직전) 실패/인터럽트 주입 지점
+if [[ "${TEST_INJECT_PUBLICATION_FAILURE:-0}" -eq 1 ]]; then
+    echo "Error: Injected simulated publication failure!" >&2
+    exit 1
+elif [[ "${TEST_INJECT_POST_BACKUP_SIGNAL:-}" == "INT" ]]; then
+    echo "Sending SIGINT after backup rename..." >&2
+    kill -INT $$
+elif [[ "${TEST_INJECT_POST_BACKUP_SIGNAL:-}" == "TERM" ]]; then
+    echo "Sending SIGTERM after backup rename..." >&2
+    kill -TERM $$
+fi
+
+mv "$STAGE_DIR" "$SKILLS_DIR"
+PUBLICATION_COMMITTED=1
+# [10단계] 빌드 완료 요약 정보 출력
 echo ""
 echo "=========================================="
 echo " Agent Skills Build Complete!"
