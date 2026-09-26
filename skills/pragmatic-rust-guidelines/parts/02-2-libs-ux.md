@@ -119,7 +119,7 @@ Smart pointers in APIs are acceptable when:
 
 - The smart pointer, based on benchmarks, significantly improves performance and the complexity is justified.
 
-[M-ABSTRACTIONS-DONT-NEST]: #
+[M-ABSTRACTIONS-DONT-NEST]: #M-SIMPLE-ABSTRACTIONS
 
 ---
 
@@ -210,7 +210,7 @@ async fn read_database(x: &DataAccess) { ... }
 
 [M-AVOID-WRAPPERS]: #M-AVOID-WRAPPERS
 [M-MOCKABLE-SYSCALLS]: ./02-3-libs-resilience.md#M-MOCKABLE-SYSCALLS
-[M-ABSTRACTIONS-DONT-NEST]: #
+[M-ABSTRACTIONS-DONT-NEST]: #M-SIMPLE-ABSTRACTIONS
 
 ---
 

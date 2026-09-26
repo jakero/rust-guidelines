@@ -38,6 +38,17 @@ CATEGORIES=(
 declare -A PART_BY_SOURCE_DIR=()
 declare -A PART_BY_RULE_ID=()
 
+# 원본 가이드라인 내 과거/변경 전 규칙 ID 별칭 매핑
+declare -A RULE_ID_ALIASES=(
+    ["M-ABSTRACTIONS-DONT-NEST"]="M-SIMPLE-ABSTRACTIONS"
+    ["M-DOC-FIRST-SENTENCE"]="M-FIRST-DOC-SENTENCE"
+)
+
+# 원본 가이드라인에서 참조하지만 현재 실체가 없는 규칙 ID 집합 (링크 비활성화 처리)
+declare -A UNRESOLVED_RULE_REFS=(
+    ["M-RUNTIME-ABSTRACTED"]=1
+)
+
 # 원본 가이드라인 디렉터리를 스캔하여 파트 매핑 및 규칙 ID 색인을 구성하는 함수
 load_source_map() {
     for entry in "${CATEGORIES[@]}"; do
@@ -145,6 +156,15 @@ rewrite_link_destination() {
         anchor="${target#*#}"
     fi
 
+    if [[ -n "$anchor" && -n "${RULE_ID_ALIASES[$anchor]+x}" ]]; then
+        anchor="${RULE_ID_ALIASES[$anchor]}"
+    fi
+
+    if [[ -n "$anchor" && -n "${UNRESOLVED_RULE_REFS[$anchor]+x}" ]]; then
+        echo "Notice: Leaving unresolved source reference '$anchor' in $source_file unlinked." >&2
+        return 2
+    fi
+
     local target_part=""
     if [[ -n "$anchor" ]] && [[ -n "${PART_BY_RULE_ID[$anchor]+x}" ]]; then
         target_part="${PART_BY_RULE_ID[$anchor]}"
@@ -174,10 +194,11 @@ rewrite_link_destination() {
 
     if [[ -n "$anchor" ]]; then
         if [[ -z "${PART_BY_RULE_ID[$anchor]+x}" && "$anchor" == M-* ]]; then
-            echo "Warning: Source link '$destination' in $source_file has no matching guideline ID; linking to the part without an anchor." >&2
-            anchor=""
+            echo "Error: Source link '$destination' in $source_file references unknown rule ID '$anchor'." >&2
+            return 1
         fi
     fi
+
 
     local rewritten
     if [[ "$source_part" == "$target_part" ]]; then
@@ -227,7 +248,14 @@ rewrite_markdown_links() {
             local destination="${BASH_REMATCH[2]}"
             local suffix="${BASH_REMATCH[3]}"
             local rewritten
-            rewritten=$(rewrite_link_destination "$source_file" "$source_part" "$destination") || return 1
+            local status=0
+            rewritten=$(rewrite_link_destination "$source_file" "$source_part" "$destination") || status=$?
+            if [[ "$status" -eq 2 ]]; then
+                # 미해결 참조는 참조 정의 라인을 생략하여 일반 텍스트로 보존
+                continue
+            elif [[ "$status" -ne 0 ]]; then
+                return 1
+            fi
             printf '%s%s%s\n' "$prefix" "$rewritten" "$suffix"
             continue
         fi
@@ -239,7 +267,17 @@ rewrite_markdown_links() {
             local destination="${BASH_REMATCH[3]}"
             local suffix="${BASH_REMATCH[4]}"
             local rewritten
-            rewritten=$(rewrite_link_destination "$source_file" "$source_part" "$destination") || return 1
+            local status=0
+            rewritten=$(rewrite_link_destination "$source_file" "$source_part" "$destination") || status=$?
+            if [[ "$status" -eq 2 ]]; then
+                local before_bracket="${prefix%\[*}"
+                local inner_text="${prefix#$before_bracket\[}"
+                prefix="${before_bracket}${inner_text}"
+                opener=""
+                rewritten=""
+            elif [[ "$status" -ne 0 ]]; then
+                return 1
+            fi
             link_tail="${opener}${rewritten}${suffix}${link_tail}"
             line="$prefix"
         done

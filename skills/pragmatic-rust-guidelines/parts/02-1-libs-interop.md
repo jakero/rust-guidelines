@@ -311,7 +311,6 @@ Synchronous functions should use [`std::io::Read`](https://doc.rust-lang.org/std
 [`futures::io::AsyncRead`](https://docs.rs/futures/latest/futures/io/trait.AsyncRead.html) and similar.
 _Types_ that need to perform runtime-specific, continuous I/O should follow [M-RUNTIME-ABSTRACTED] instead.
 
-[M-RUNTIME-ABSTRACTED]: #
 
 ---
 
