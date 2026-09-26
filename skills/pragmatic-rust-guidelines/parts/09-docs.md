@@ -161,7 +161,7 @@ pub use foo::Foo;
 
 This does not apply to `std` or 3rd party types; these should always be re-exported without inlining to make it clear they are external.
 
-> ### <alert></alert> Still avoid glob exports
+> ### Caution: Still avoid glob exports
 >
 > The `#[doc(inline)]` trick above does not change [M-NO-GLOB-REEXPORTS]; you generally should not re-export items via wildcards.
 

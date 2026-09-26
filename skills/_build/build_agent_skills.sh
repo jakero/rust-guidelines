@@ -489,8 +489,37 @@ strip_agent_images() {
     done
 }
 
+# 에이전트용 출력에서 코드 블록(fence) 외부의 <tip></tip>, <alert></alert> 마커를 일반 텍스트 라벨로 변환하는 필터
+transform_advisory_markers() {
+    local fence_pattern='^[[:space:]]*([>][[:space:]]*)*(`{3,}|~{3,})'
+    local in_fence=0
+    local line
 
-# 개별 가이드라인 마크다운 정제 함수 (저작권 제거, 앵커/근거 변환, 이미지 생략, 링크 재작성)
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ $fence_pattern ]]; then
+            if [[ "$in_fence" -eq 0 ]]; then
+                in_fence=1
+            else
+                in_fence=0
+            fi
+            printf '%s\n' "$line"
+            continue
+        fi
+        if [[ "$in_fence" -eq 1 ]]; then
+            printf '%s\n' "$line"
+            continue
+        fi
+
+        # <tip></tip> 및 <alert></alert> 마커를 의미가 명확한 일반 Markdown 라벨로 정규화
+        line="${line//<tip><\/tip>[[:space:]]/Tip: }"
+        line="${line//<tip><\/tip>/Tip: }"
+        line="${line//<alert><\/alert>[[:space:]]/Caution: }"
+        line="${line//<alert><\/alert>/Caution: }"
+        printf '%s\n' "$line"
+    done
+}
+
+# 개별 가이드라인 마크다운 정제 함수 (저작권 제거, 앵커/근거 변환, 권고 마커 정규화, 이미지 생략, 링크 재작성)
 clean_guideline() {
     local file="$1"
     local part_name="$2"
@@ -501,10 +530,10 @@ clean_guideline() {
         | sed -E 's/<why>(.*)<\/why>/> **Rationale**: \1/' \
         | sed -E 's/<version>[^<]*<\/version>//g' \
         | strip_agent_images \
+        | transform_advisory_markers \
         | rewrite_markdown_links "$file" "$part_name" \
         | awk 'NF{print $0; b=0} !NF{if(!b){print ""; b=1}}'
 }
-
 # [4단계] 카테고리별 파트 파일(parts/*.md) 생성 및 가이드라인 정제
 # 각 범주를 순회하며 목차(TOC), Rationale 요약, 본문 정제 및 라우팅 메타데이터를 수집합니다.
 for entry in "${CATEGORIES[@]}"; do

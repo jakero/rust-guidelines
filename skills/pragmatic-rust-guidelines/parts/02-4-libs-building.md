@@ -67,7 +67,7 @@ publishing workflow or earlier, and the resulting artifacts (e.g., `.rs` files) 
 
 If a dependency is known to be platform specific, the parent must use conditional (platform) compilation or opt-in feature gates.
 
-> **<alert></alert> Libraries are Responsible for Their Dependencies.**
+> **Caution: Libraries are Responsible for Their Dependencies.**
 >
 > Imagine you author a `Copilot` crate, which in turn uses an `HttpClient`, which in turn depends on a `perl` script to compile.
 >

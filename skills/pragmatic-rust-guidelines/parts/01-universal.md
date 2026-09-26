@@ -234,7 +234,7 @@ side-effect and should prompt you to design more flexible abstractions that woul
 In some cases, it is desirable to re-join individual crates back into a single _umbrella crate_, such as when dealing with proc macros, or runtimes.
 Functionality split for technical reasons (e.g., a `foo_proc` proc macro crate) should always be re-exported. Otherwise, re-exports should be used sparingly.
 
-> ### <tip></tip> Features vs. Crates
+> ### Tip: Features vs. Crates
 >
 > As a rule of thumb, crates are for items that can reasonably be used on their own. Features should unlock extra functionality that
 > can't live on its own. In the case of umbrella crates, see below, features may also be used to enable constituents (but then that functionality

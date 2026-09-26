@@ -74,7 +74,7 @@ As a rule of thumb, primary service API types should not nest _on their own voli
 APIs should not require users having to deal with an `Foo<Bar<FooBar>>`. However, if `Foo<T>` users want to bring their own `A<B<C>>` as `T` they
 should be free to do so.
 
-> ### <tip></tip> Type Magic for Better UX?
+> ### Tip: Type Magic for Better UX?
 >
 > The guideline above is written with 'bread-and-butter' types in mind you might create during  _normal_ development activity. Its intention is to
 > reduce friction users encounter when working with your code.
@@ -327,7 +327,7 @@ impl std::error::Error for MyError { }
 
 Lastly, if you happen to emit lots of errors from your crate, consider creating a private `bail!()` helper macro to simplify error instantiation.
 
-> ### <tip></tip> When You Get Backtraces
+> ### Tip: When You Get Backtraces
 >
 > Backtraces are an invaluable debug tool in complex or async code, since  errors might _travel_ far through a callstack before being surfaced.
 >

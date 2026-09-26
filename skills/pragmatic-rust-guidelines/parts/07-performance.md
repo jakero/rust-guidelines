@@ -85,7 +85,7 @@ sharing screenshots of your latest profiling hot spots.
 
 - [Performance Tips](https://cheats.rs/#performance-tips)
 
-> ### <tip></tip> How much faster?
+> ### Tip: How much faster?
 >
 > Some of the most common 'language related' issues we have seen include:
 >
@@ -136,7 +136,7 @@ async fn process_items(zip_file: File) {
 If the number and duration of your individual operations are unpredictable you should use APIs such as `has_budget_remaining()` and
 related APIs to query your hosting runtime.
 
-> ### <tip></tip> Yield how often?
+> ### Tip: Yield how often?
 >
 > In a thread-per-core model the overhead of task switching must be balanced against the systemic effects of starving unrelated tasks.
 >
@@ -407,7 +407,7 @@ Functions marked `async` in the hot path should track their future sizes, and ta
 - reduction of type size of items held across `.await` points,
 - returning `impl Future` and extracting setup logic from `async {}` capture.
 
-> ### <tip></tip> Future 'Stack' Sizes
+> ### Tip: Future 'Stack' Sizes
 >
 > In Futures, what would naively be considered _their stack_, is actually part of a significantly more complicated machinery under their  hood.
 >

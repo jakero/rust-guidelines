@@ -93,7 +93,7 @@ async fn foo() {
 }
 ```
 
-> ### <tip></tip> The Cost of Send
+> ### Tip: The Cost of Send
 >
 > Ideally, there would be abstractions that are `Send` in work-stealing runtimes, and `!Send` in thread-per-core models based on non-atomic
 > types like `Rc` and `RefCell` instead.

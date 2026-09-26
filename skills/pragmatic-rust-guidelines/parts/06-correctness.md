@@ -85,7 +85,7 @@ In any case, `unsafe` must follow the guidelines outlined below.
 
 Unsound code is seemingly _safe_ code that may produce undefined behavior when called from other safe code, or on its own accord.
 
-> ### <tip></tip> Meaning of 'Safe'
+> ### Tip: Meaning of 'Safe'
 >
 > The terms _safe_ and `unsafe` are technical terms in Rust.
 >
@@ -116,7 +116,7 @@ No Exceptions
 
 While you may break most guidelines if you have a good enough reason, there are no exceptions in this case: unsound code is never acceptable.
 
-> ### <tip></tip> It's the Module Boundaries
+> ### Tip: It's the Module Boundaries
 >
 > Note that soundness boundaries equal module boundaries! It is perfectly fine, in an otherwise safe abstraction,
 > to have safe functions that rely on behavior guaranteed elsewhere **in the same module**.
@@ -232,7 +232,7 @@ fn parse_uri(s: &str) -> Result<Uri, ParseError> { };
 
 ```
 
-> ### <tip></tip> Make it 'Correct by Construction'
+> ### Tip: Make it 'Correct by Construction'
 >
 > While panicking on a detected programming error is the 'least bad option', your panic might still ruin someone's day.
 > For any user input or calling sequence that would otherwise panic, you should also explore if you can use the type

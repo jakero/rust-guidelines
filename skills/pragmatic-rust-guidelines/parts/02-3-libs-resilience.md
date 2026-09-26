@@ -34,7 +34,7 @@ network access, clocks, entropy sources and seeds, and similar. More generally, 
 
 should be mockable.
 
-> ### <tip></tip> Mocking Allocations?
+> ### Tip: Mocking Allocations?
 >
 > Unless you write kernel code or similar, you can consider allocations to be deterministic, hardware independent and practically
 > infallible, thus not covered by this guideline.
@@ -249,7 +249,7 @@ This means for any newtype that is non-total:
 - Conversions from weaker types into the newtype must be fallible (`TryFrom`/`FromStr`).
 - Infallible `From` implementations may not be offered.
 
-> ### <tip></tip> Why `const`?
+> ### Tip: Why `const`?
 >
 > Const constructors allows them to be used inside `const {}` blocks, which surfaces these violations as errors. This enables
 > users to do `let month_due = const { Month::new(14) }` and avoids hitting these paths during runtime.
